@@ -18,8 +18,7 @@ public record Event(BigId id,
         out.println("Event.Event[2]");
     }
 
-    public record Causation(long eventId,
-                            Aggregate eventAggregate) {
+    public record Causation(long eventId, Aggregate eventAggregate) {
     }
 
     public record Operation(Operator operator, Operand operand) {

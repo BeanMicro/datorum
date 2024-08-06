@@ -19,6 +19,7 @@ import io.beandev.datorum.schema.App;
 import io.beandev.datorum.schema.Attribute;
 import io.beandev.datorum.schema.Context;
 import io.beandev.datorum.schema.Entity;
+import io.beandev.datorum.schema.jdbc.JdbcSchemaRepository;
 import io.beandev.datorum.schema.jooq.JooqSchemaRepository;
 import org.jooq.DSLContext;
 import org.jooq.Query;
@@ -43,7 +44,8 @@ import static org.jooq.impl.DSL.table;
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
+        // TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the
+        // highlighted text
         // to see how IntelliJ IDEA suggests fixing it.
         out.printf("Hello and welcome!");
 
@@ -71,13 +73,16 @@ public class Main {
 
         AttributeRecord intRecord = new AttributeRecord(new BigId(12), 1, attribute, entityValue, 333L);
 
-        Event event = new Event(new BigId(1), new Event.Operation[]{new Event.Operation(Event.Operator.CREATE, new Event.Operand(record))});
+        Event event = new Event(new BigId(1),
+                new Event.Operation[] { new Event.Operation(Event.Operator.CREATE, new Event.Operand(record)) });
 
         out.println("Event: " + event);
 
         for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
+            // TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have
+            // set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
+            // for you, but you can always add more by pressing <shortcut
+            // actionId="ToggleLineBreakpoint"/>.
             out.println("i = " + i);
             out.println("stringValue = " + record.value().stringValue());
             out.println("intValue = " + intRecord.value().longValue());
@@ -85,16 +90,18 @@ public class Main {
 
         List<Map<String, String>> maps = new ArrayList<>(
                 Arrays.asList(
-                        new HashMap<>() {{
-                            put("key1", "value1");
-                            put("key2", "value2");
-                        }},
-                        new HashMap<>() {{
-                            put("key1", "value3");
-                            put("key2", "value4");
-                        }}
-                )
-        );
+                        new HashMap<>() {
+                            {
+                                put("key1", "value1");
+                                put("key2", "value2");
+                            }
+                        },
+                        new HashMap<>() {
+                            {
+                                put("key1", "value3");
+                                put("key2", "value4");
+                            }
+                        }));
 
         maps.stream().peek(map -> {
             out.println(map);
@@ -113,10 +120,10 @@ public class Main {
                 .sorted()
                 .forEach(item -> out.println("After : item = " + item));
 
-// The "create" reference is an instance of DSLContext
+        // The "create" reference is an instance of DSLContext
         String userName = "postgres";
         String password = "password";
-        String url = "jdbc:postgresql://127.0.0.1:5433/eventstore_db";
+        String url = "jdbc:postgresql://127.0.0.1:5432/eventstore_db";
 
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(url);
@@ -127,26 +134,28 @@ public class Main {
         cp.setMaximumPoolSize(12);
         cp.setMinimumIdle(2);
 
-//        try (HikariDataSource ds = new HikariDataSource(config)) {
-//            ds.setMaximumPoolSize(12);
-//            ds.setMinimumIdle(2);
+        // try (HikariDataSource ds = new HikariDataSource(config)) {
+        // ds.setMaximumPoolSize(12);
+        // ds.setMinimumIdle(2);
 
         // Connection is the only JDBC resource that we need
         // PreparedStatement and ResultSet are handled by jOOQ, internally
         try (Connection conn = cp.getConnection()) {
             DSLContext create = DSL.using(conn, SQLDialect.POSTGRES);
-//            DSLContext create = DSL.using(ds, SQLDialect.POSTGRES);
+            // DSLContext create = DSL.using(ds, SQLDialect.POSTGRES);
 
-// Fetch a SQL string from a jOOQ Query in order to manually execute it with another tool.
-// For simplicity reasons, we're using the API to construct case-insensitive object references, here.
+            // Fetch a SQL string from a jOOQ Query in order to manually execute it with
+            // another tool.
+            // For simplicity reasons, we're using the API to construct case-insensitive
+            // object references, here.
             Query query = create.select(field("book.title")
-//                            , field("AUTHOR.FIRST_NAME"), field("AUTHOR.LAST_NAME")
-                    )
+            // , field("AUTHOR.FIRST_NAME"), field("AUTHOR.LAST_NAME")
+            )
                     .from(table("book"))
-//                    .join(table("AUTHOR"))
-//                    .on(field("BOOK.AUTHOR_ID").eq(field("AUTHOR.ID")))
-//                    .where(field("BOOK.PUBLISHED_IN").eq(1948))
-                    ;
+            // .join(table("AUTHOR"))
+            // .on(field("BOOK.AUTHOR_ID").eq(field("AUTHOR.ID")))
+            // .where(field("BOOK.PUBLISHED_IN").eq(1948))
+            ;
 
             String sql = query.getSQL();
             List<Object> bindValues = query.getBindValues();
@@ -174,51 +183,51 @@ public class Main {
         }
 
         var dsm = new DataSourceManager(
-                new HashMap<String, DataSource>() {{
-                    put("primary", cp);
-                }}
-        );
+                new HashMap<String, DataSource>() {
+                    {
+                        put("primary", cp);
+                    }
+                });
 
         dsm.putDataSource("secondary", cp);
 
         SimpleJooqRepository repo = new SimpleJooqRepository<Aggregate, BigId>(
                 Aggregate.class,
-                cp
-        );
+                cp);
         repo.findAll();
 
-        JooqSchemaRepository schemaRepository = new JooqSchemaRepository(cp);
-        schemaRepository.createBaseTables();
+        // JooqSchemaRepository schemaRepository = new JooqSchemaRepository(cp);
+        // schemaRepository.createBaseTables();
+
+        JdbcSchemaRepository jdbcSchemaRepository = new JdbcSchemaRepository(cp);
+        jdbcSchemaRepository.createBaseTables();
 
         Migration schemaMigration = new Migration(
                 1,
                 20240715122600L,
-                new Difference[]{
+                new Difference[] {
                         new Difference(
                                 0,
                                 "name",
-                                Scope.AGGREGATE
-                        )
-                }
-        );
-
+                                Scope.AGGREGATE)
+                });
 
         JdbcMigrationRepository migrationRepository = new JdbcMigrationRepository(cp);
         migrationRepository.createBaseTables();
         Migrator m = new Migrator(migrationRepository);
         m.apply(schemaMigration);
 
-
-//        Migration schemaMigration = new Migration(
-//                new Command[]{
-//                        new Command(new EntityCommand(entity), Command.Action.CREATE)
-//                }
-//        );
-//        JooqMigrationRepository migrationRepository = new JooqMigrationRepository(cp);
-//        migrationRepository.createBaseTables();
-//
-//        out.println(schemaMigration.hash());
-//        Migrator m = new Migrator(migrationRepository);
-//        m.progress();
+        // Migration schemaMigration = new Migration(
+        // new Command[]{
+        // new Command(new EntityCommand(entity), Command.Action.CREATE)
+        // }
+        // );
+        // JooqMigrationRepository migrationRepository = new
+        // JooqMigrationRepository(cp);
+        // migrationRepository.createBaseTables();
+        //
+        // out.println(schemaMigration.hash());
+        // Migrator m = new Migrator(migrationRepository);
+        // m.progress();
     }
 }

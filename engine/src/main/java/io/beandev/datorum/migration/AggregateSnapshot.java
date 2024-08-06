@@ -34,8 +34,7 @@ public record AggregateSnapshot(Aggregate aggregate, Entity[] entities, Attribut
                             put("aggregate_id", entity.aggregate().id());
                             put("is_root", entity.isRoot());
                         }
-                    }).toArray(HashMap[]::new)
-            );
+                    }).toArray(HashMap[]::new));
 
             String attributesJson = objectMapper.writeValueAsString(
                     Arrays.stream(attributes).map(attribute -> new HashMap<>() {
@@ -47,9 +46,8 @@ public record AggregateSnapshot(Aggregate aggregate, Entity[] entities, Attribut
                             put("is_nullable", attribute.isNullable());
                             put("is_unique", attribute.isUnique());
                         }
-                    }).toArray(HashMap[]::new)
-            );
-            json = objectMapper.writeValueAsString(new String[]{
+                    }).toArray(HashMap[]::new));
+            json = objectMapper.writeValueAsString(new String[] {
                     aggregateJson,
                     entitiesJson,
                     attributesJson

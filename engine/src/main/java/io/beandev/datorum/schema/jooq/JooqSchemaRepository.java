@@ -65,7 +65,7 @@ public class JooqSchemaRepository implements SchemaRepository {
                                 name        VARCHAR(255),
                                 aggregate   datorum_schema.AggregateType
                             );
-                            
+
                             CREATE TYPE datorum_schema.DataTypeEnum AS ENUM (
                                 'BOOLEAN',
                                 'INTEGER',
@@ -78,20 +78,20 @@ public class JooqSchemaRepository implements SchemaRepository {
                                 'RELATION',
                                 'MAP'
                             );
-                            
+
                             CREATE TYPE datorum_schema.DataType AS (
                                 type              datorum_schema.DataTypeEnum,
                                 precisionOrLength INTEGER,
                                 scale             INTEGER
                             );
-                            
+
                             CREATE TYPE datorum_schema.AttributeType AS (
                                 id                  BIGINT,
                                 name                VARCHAR(255),
                                 type                datorum_schema.DataType,
                                 owner_entity_id     BIGINT,
                                 relation_entity_id  BIGINT
-                            );             
+                            );
                         """);
 
                 ctx.execute("""
@@ -99,36 +99,36 @@ public class JooqSchemaRepository implements SchemaRepository {
                                 property_name VARCHAR(150) PRIMARY KEY,
                                 property_value VARCHAR(150)
                             );
-                            INSERT INTO datorum_schema.system_info (property_name, property_value) 
+                            INSERT INTO datorum_schema.system_info (property_name, property_value)
                             VALUES ('schema.version', 'v1.0.0');
                         """);
                 ctx.execute("""
                             CREATE TABLE IF NOT EXISTS datorum_schema.app (
-                                id BIGINT PRIMARY KEY, 
+                                id BIGINT PRIMARY KEY,
                                 name VARCHAR(255)
                             )
                         """);
                 ctx.execute("""
                             CREATE TABLE IF NOT EXISTS datorum_schema.context (
-                            id BIGINT PRIMARY KEY, 
-                            name VARCHAR(255), 
-                            app_id BIGINT, 
+                            id BIGINT PRIMARY KEY,
+                            name VARCHAR(255),
+                            app_id BIGINT,
                             FOREIGN KEY (app_id) REFERENCES datorum_schema.app(id)
                             )
                         """);
                 ctx.execute("""
                             CREATE TABLE IF NOT EXISTS datorum_schema.aggregate (
-                            id BIGINT PRIMARY KEY, 
-                            name VARCHAR(255), 
-                            context_id BIGINT, 
+                            id BIGINT PRIMARY KEY,
+                            name VARCHAR(255),
+                            context_id BIGINT,
                             FOREIGN KEY (context_id) REFERENCES datorum_schema.context(id)
                             )
                         """);
                 ctx.execute("""
                             CREATE TABLE IF NOT EXISTS datorum_schema.partition (
-                            id BIGINT PRIMARY KEY, 
+                            id BIGINT PRIMARY KEY,
                             name VARCHAR(255),
-                            app_id BIGINT, 
+                            app_id BIGINT,
                             context_id BIGINT,
                             aggregate_id BIGINT,
                             FOREIGN KEY (context_id) REFERENCES datorum_schema.context(id)
@@ -136,18 +136,18 @@ public class JooqSchemaRepository implements SchemaRepository {
                         """);
                 ctx.execute("""
                             CREATE TABLE IF NOT EXISTS datorum_schema.entity (
-                            id BIGINT PRIMARY KEY, 
-                            name VARCHAR(255), 
-                            aggregate_id BIGINT, 
+                            id BIGINT PRIMARY KEY,
+                            name VARCHAR(255),
+                            aggregate_id BIGINT,
                             is_root BOOLEAN,
                             FOREIGN KEY (aggregate_id) REFERENCES datorum_schema.aggregate(id)
                             )
                         """);
                 ctx.execute("""
                             CREATE TABLE IF NOT EXISTS datorum_schema.attribute (
-                            id BIGINT PRIMARY KEY, 
+                            id BIGINT PRIMARY KEY,
                             name VARCHAR(255),
-                            type VARCHAR(50), 
+                            type VARCHAR(50),
                             entity_id BIGINT,
                             relation_id BIGINT,
                             FOREIGN KEY (entity_id) REFERENCES datorum_schema.entity(id)
