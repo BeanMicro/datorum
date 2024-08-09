@@ -14,6 +14,8 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.3'
     implementation 'com.zaxxer:HikariCP:5.1.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
+    implementation 'io.kubernetes:client-java:18.0.0'
+
 
     testImplementation 'io.cucumber:cucumber-java:7.15.0'
     testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.15.0'

@@ -34,3 +34,6 @@ sc-pack:
 
 sc-test: sc-pack
 	./gradlew smartcontract:test
+
+test-engine:
+	./gradlew engine:test

@@ -20,16 +20,16 @@ public class JdbcSchemaRepository implements SchemaRepository {
     public void createBaseTables() {
         try (Connection conn = dataSource.getConnection()) {
             try {
-                //Disable auto commit
+                // Disable auto commit
                 conn.setAutoCommit(false);
 
-                //Create schema
+                // Create schema
                 String sql = "CREATE SCHEMA IF NOT EXISTS \"datorum_schema\"";
                 try (Statement stmt = conn.createStatement()) {
                     stmt.execute(sql);
                 }
 
-                //Check if the type already exists
+                // Check if the type already exists
                 boolean exists;
                 sql = "SELECT 1 FROM pg_type JOIN pg_namespace ON pg_type.typnamespace = pg_namespace.oid WHERE typname = '_apptype' AND typtype = 'b' AND pg_namespace.nspname = 'datorum_schema'";
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -37,13 +37,13 @@ public class JdbcSchemaRepository implements SchemaRepository {
                     exists = rs.next();
                 }
 
-                //If the type exists end transaction
+                // If the type exists end transaction
                 if (exists) {
                     conn.commit();
                     return;
                 }
 
-                //Creating types
+                // Creating types
                 sql = """
                         CREATE TYPE "datorum_schema"."AppType" AS (
                              id      BIGINT,
@@ -93,7 +93,7 @@ public class JdbcSchemaRepository implements SchemaRepository {
                     stmt.execute(sql);
                 }
 
-                //Creating tables
+                // Creating tables
                 sql = """
                         CREATE TABLE IF NOT EXISTS "datorum_schema"."system_info" (
                             property_name VARCHAR(150) PRIMARY KEY,
@@ -143,7 +143,7 @@ public class JdbcSchemaRepository implements SchemaRepository {
                     stmt.execute(sql);
                 }
 
-                //Insert into "system_info"
+                // Insert into "system_info"
                 sql = "INSERT INTO \"datorum_schema\".\"system_info\" (property_name, property_value) VALUES  (?, ?)";
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     pstmt.setString(1, "schema.version");
@@ -151,12 +151,12 @@ public class JdbcSchemaRepository implements SchemaRepository {
                     pstmt.executeUpdate();
                 }
 
-                //Commit all the changes
+                // Commit all the changes
                 conn.commit();
             } catch (SQLException e) {
                 e.printStackTrace();
 
-                //If there is exception, rollback the transaction
+                // If there is exception, rollback the transaction
                 try {
                     conn.rollback();
                 } catch (SQLException ex) {
@@ -164,7 +164,7 @@ public class JdbcSchemaRepository implements SchemaRepository {
                 }
             } finally {
                 try {
-                    //Set auto commit true at the end
+                    // Set auto commit true at the end
                     conn.setAutoCommit(true);
                 } catch (SQLException e) {
                     e.printStackTrace();
