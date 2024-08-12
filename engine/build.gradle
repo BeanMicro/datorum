@@ -36,3 +36,14 @@ sourceSets {
         }
     }
 }
+
+test {
+    testLogging {
+        exceptionFormat = 'full'
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+        events "passed", "skipped", "failed", "started"
+        showStandardStreams = true
+    }
+}
