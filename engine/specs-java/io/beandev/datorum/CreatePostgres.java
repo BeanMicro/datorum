@@ -55,7 +55,6 @@ public class CreatePostgres {
 
     }
 
-    // Method to definite the PostgreSQL Pod
     private static V1Pod createPostgresPodDefinition() {
         return new V1Pod()
                 .apiVersion("v1")
@@ -76,7 +75,6 @@ public class CreatePostgres {
                                                 .value("password"))))));
     }
 
-    // Method to definite the PostgreSQL Service
     private static V1Service createPostgresServiceDefinition() {
         return new V1Service()
                 .apiVersion("v1")
@@ -93,7 +91,6 @@ public class CreatePostgres {
                                         .protocol("TCP"))));
     }
 
-    // Method to check if the PostgreSQL Service is ready
     private static void waitForPostgresServiceReady(CoreV1Api api, String namespace, String serviceName)
             throws Exception {
         // Timeout for the PostgreSQL Sercvice is 30 seconds
@@ -115,7 +112,6 @@ public class CreatePostgres {
         }
     }
 
-    // Method to check if the PostgreSQL Pod is ready
     private static void waitForPostgresPodReady(CoreV1Api api, String namespace, String podName) throws Exception {
         // Timeout for the PostgreSQL Pod is 60 seconds
         long timeout = 60;
@@ -136,14 +132,13 @@ public class CreatePostgres {
         }
     }
 
-    // Method to ensure that PostgreSQL pod exists
     private static void ensurePostgresPodExists(CoreV1Api api, String namespace, String podName) throws Exception {
         try {
             V1Pod existingPod = api.readNamespacedPod(podName, namespace, null);
             System.out.println("PostgreSQL Pod already exists: " + existingPod.getMetadata().getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // PostgreSQL Pod does not exist, create it
+                // If PostgreSQL Pod does not exist, create it
                 V1Pod postgresPodDef = createPostgresPodDefinition();
                 V1Pod createdPod = api.createNamespacedPod(namespace, postgresPodDef, null, null, null, null);
                 System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
@@ -153,7 +148,6 @@ public class CreatePostgres {
         }
     }
 
-    // Method to ensure that PostgreSQL service exists
     private static void ensurePostgresServiceExists(CoreV1Api api, String namespace, String serviceName)
             throws Exception {
         try {
@@ -161,7 +155,7 @@ public class CreatePostgres {
             System.out.println("PostgreSQL Service already exists: " + existingService.getMetadata().getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // PostgreSQL Service does not exist, create it
+                // If PostgreSQL Service does not exist, create it
                 V1Service postgresServiceDef = createPostgresServiceDefinition();
                 V1Service createdService = api.createNamespacedService(namespace, postgresServiceDef, null, null, null,
                         null);
