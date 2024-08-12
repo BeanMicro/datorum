@@ -23,9 +23,10 @@ public class DatabaseDefinitionSteps {
 
     @Given("^a Postgres database without schemas$")
     public void aPostgresDatabaseWithoutSchemas() throws Exception {
-        // Create Database
+
         CreatePostgres.getInstance();
         dataSource = dataSource();
+
         String schemaName = "datorum_schema";
         dropSchemaIfExists(schemaName);
     }
@@ -63,7 +64,6 @@ public class DatabaseDefinitionSteps {
     }
 
     private void checkSchemaExist(String schemaName) {
-        // Verify schema which name is from schemaName
         String query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '" + schemaName + "'";
 
         try (Connection con = dataSource.getConnection();
@@ -82,7 +82,6 @@ public class DatabaseDefinitionSteps {
     }
 
     private void dropSchemaIfExists(String schemaName) {
-        // Drop schema which name is from schemaName if it exists
         String query = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
 
         try (Connection con = dataSource.getConnection();

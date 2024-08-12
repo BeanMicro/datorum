@@ -31,7 +31,6 @@ public class CreatePostgres {
     public CreatePostgres() throws Exception {
         ApiClient client = Config.defaultClient();
         Configuration.setDefaultApiClient(client);
-        // Create CoreV1Api to perform operations with Core API
         this.api = new CoreV1Api();
         initDatabase();
     }
@@ -93,8 +92,7 @@ public class CreatePostgres {
 
     private static void waitForPostgresServiceReady(CoreV1Api api, String namespace, String serviceName)
             throws Exception {
-        // Timeout for the PostgreSQL Sercvice is 30 seconds
-        long timeout = 30;
+        long serviceTimeoutSeconds = 30;
         long startTime = System.currentTimeMillis();
         while (true) {
             V1Service service = api.readNamespacedService(serviceName, namespace, null);
@@ -102,8 +100,9 @@ public class CreatePostgres {
                 System.out.println("PostgreSQL Service is ready.");
                 break;
             } else {
-                long elapsed = (System.currentTimeMillis() - startTime) / 1000;
-                if (elapsed > timeout) {
+                long currentTime = System.currentTimeMillis();
+                long elapsedSeconds = (currentTime - startTime) / 1000;
+                if (elapsedSeconds > serviceTimeoutSeconds) {
                     throw new Exception("Timeout : PostgreSQL Service is not ready in 30 seconds");
                 }
                 System.out.println("PostgreSQL Service is not ready, waiting...");
@@ -113,8 +112,7 @@ public class CreatePostgres {
     }
 
     private static void waitForPostgresPodReady(CoreV1Api api, String namespace, String podName) throws Exception {
-        // Timeout for the PostgreSQL Pod is 60 seconds
-        long timeout = 60;
+        long podTimeoutSeconds = 60;
         long startTime = System.currentTimeMillis();
         while (true) {
             V1Pod pod = api.readNamespacedPod(podName, namespace, null);
@@ -122,8 +120,9 @@ public class CreatePostgres {
                 System.out.println("PostgreSQL Pod is ready.");
                 break;
             } else {
-                long elapsed = (System.currentTimeMillis() - startTime) / 1000;
-                if (elapsed > timeout) {
+                long currentTime = System.currentTimeMillis();
+                long elapsedSeconds = (currentTime - startTime) / 1000;
+                if (elapsedSeconds > podTimeoutSeconds) {
                     throw new Exception("Timeout : PostgreSQL Pod is not ready in 1 minute");
                 }
                 System.out.println("PostgreSQL Pod is not ready, waiting...");
@@ -138,12 +137,11 @@ public class CreatePostgres {
             System.out.println("PostgreSQL Pod already exists: " + existingPod.getMetadata().getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // If PostgreSQL Pod does not exist, create it
                 V1Pod postgresPodDef = createPostgresPodDefinition();
                 V1Pod createdPod = api.createNamespacedPod(namespace, postgresPodDef, null, null, null, null);
                 System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
             } else {
-                throw e; // Rethrow other API exceptions
+                throw e;
             }
         }
     }
@@ -155,13 +153,12 @@ public class CreatePostgres {
             System.out.println("PostgreSQL Service already exists: " + existingService.getMetadata().getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // If PostgreSQL Service does not exist, create it
                 V1Service postgresServiceDef = createPostgresServiceDefinition();
                 V1Service createdService = api.createNamespacedService(namespace, postgresServiceDef, null, null, null,
                         null);
                 System.out.println("PostgreSQL Service created: " + createdService.getMetadata().getName());
             } else {
-                throw e; // Rethrow other API exceptions
+                throw e;
             }
         }
     }
