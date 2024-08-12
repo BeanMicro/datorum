@@ -64,10 +64,11 @@ public class DatabaseDefinitionSteps {
     }
 
     private void checkSchemaExist(String schemaName) {
-        String query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '" + schemaName + "'";
+        String checkSchemaQuery = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '"
+                + schemaName + "'";
 
         try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query);
+                PreparedStatement pst = con.prepareStatement(checkSchemaQuery);
                 ResultSet rs = pst.executeQuery()) {
 
             Assertions.assertTrue(rs.next(), "Schema " + schemaName + "should exist");
@@ -82,10 +83,10 @@ public class DatabaseDefinitionSteps {
     }
 
     private void dropSchemaIfExists(String schemaName) {
-        String query = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
+        String dropSchemaQuery = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
 
         try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query)) {
+                PreparedStatement pst = con.prepareStatement(dropSchemaQuery)) {
             pst.executeUpdate();
         } catch (SQLException ex) {
             ex.printStackTrace();
