@@ -55,7 +55,7 @@ public class CreatePostgres {
 
     }
 
-    // Method to create the PostgreSQL Pod definition
+    // Method to definite the PostgreSQL Pod
     private static V1Pod createPostgresPodDefinition() {
         return new V1Pod()
                 .apiVersion("v1")
@@ -76,7 +76,7 @@ public class CreatePostgres {
                                                 .value("password"))))));
     }
 
-    // Method to create the PostgreSQL Service definition
+    // Method to definite the PostgreSQL Service
     private static V1Service createPostgresServiceDefinition() {
         return new V1Service()
                 .apiVersion("v1")
