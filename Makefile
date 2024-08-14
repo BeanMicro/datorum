@@ -1,4 +1,4 @@
-	create-cluster:
+create-cluster:
 	kind create cluster --name eventstore --config ./app/k8s/local/kind.yaml
 	kubectl cluster-info --context kind-eventstore
 	docker pull postgres:16.2-alpine3.19
@@ -37,3 +37,15 @@ sc-test: sc-pack
 
 test-engine:
 	./gradlew engine:test
+
+check-kind-config-and-create-cluster:
+	@if [ -f ./app/k8s/local/kind.yaml ]; then \
+		if ! kind get clusters | grep -q eventstore; then \
+			kind create cluster --name eventstore --config ./app/k8s/local/kind.yaml; \
+		else \
+			echo "Cluster 'eventstore' already exists."; \
+		fi\
+		else \
+			echo "Kind config file not found!" >&2;\
+			exit 1; \
+	fi 
