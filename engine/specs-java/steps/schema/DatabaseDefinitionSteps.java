@@ -66,23 +66,23 @@ public class DatabaseDefinitionSteps {
     @And("table {word} SHOULD have required {word}\\({int}\\) {word} column")
     public void tableShouldHaveRequiredVarcharTypeColumn(String tableName, String dataType,
             Integer length, String columnName) {
-        // verifyIsVarcharColumn(tableName, columnName, dataType, length);
+        verifyIsVarcharColumn(tableName, columnName, dataType, length);
     }
 
     @And("table {word} SHOULD have {word} {word} column")
     public void tableShouldHaveIntTypeColumn(String tableName, String dataType, String columnName) {
-        // verifyIsIntColumn(tableName, columnName, dataType);
+        verifyIsIntColumn(tableName, columnName, dataType);
     }
 
     @And("all the created tables SHOULD have primary key {word} {word} column")
     public void allTheCreatedTablesShouldHavePrimaryKeyBigintIdColumn(String dataType, String columnName) {
-        // verifyAllCreatedTableHavePK(dataType, columnName);
+        verifyAllCreatedTableHavePK(dataType, columnName);
     }
 
     @And("all the created tables SHOULD have required {word}\\({int}\\) {word} column")
     public void allTheCreatedTablesShouldHaveRequiredVarcharNameColumn(String dataType, Integer length,
             String columnName) {
-        // verifyAllCreatedTableHaveColumnName(dataType, columnName, length);
+        verifyAllCreatedTableHaveColumnName(dataType, columnName, length);
     }
 
     private HikariDataSource dataSource() {
@@ -170,40 +170,55 @@ public class DatabaseDefinitionSteps {
     }
 
     private void verifyIsVarcharColumn(String tableName, String columnName, String dataType, Integer length) {
-        String query = "SELECT 1 "
-                + " FROM information_schema.columns "
-                + " WHERE table_name = '" + tableName + "'"
-                + " AND column_name =  '" + columnName + "'"
-                + " AND data_type = '" + dataType + "'"
-                + " AND character_maximum_length = " + length;
+        try (Connection con = dataSource.getConnection()) {
+            DatabaseMetaData metaData = con.getMetaData();
 
-        try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query);
-                ResultSet rs = pst.executeQuery()) {
+            try (ResultSet columns = metaData.getColumns(null, null, tableName, columnName)) {
+                boolean found = false;
+                while (columns.next()) {
+                    String actualColumnDataType = columns.getString("TYPE_NAME");
+                    int columnLength = columns.getInt("COLUMN_SIZE");
 
-            Assertions.assertTrue(rs.next(),
-                    "Table " + tableName + " SHOULD have required " + dataType + "(" + length + ") " + columnName
-                            + " column");
+                    if (actualColumnDataType.equalsIgnoreCase(dataType) && columnLength == length) {
+                        found = true;
+                        break;
+                    }
+                }
 
+                Assertions.assertTrue(found,
+                        "Table " + tableName + " SHOULD have required " + dataType + "(" + length + ") " + columnName
+                                + " column");
+
+            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
     private void verifyIsIntColumn(String tableName, String columnName, String dataType) {
-        String query = "SELECT 1 "
-                + " FROM information_schema.columns "
-                + " WHERE table_name = '" + tableName + "'"
-                + " AND column_name =  '" + columnName + "'"
-                + " AND data_type = '" + dataType + "'";
+        try (Connection con = dataSource.getConnection()) {
+            DatabaseMetaData metaData = con.getMetaData();
 
-        try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(query);
-                ResultSet rs = pst.executeQuery()) {
+            try (ResultSet columns = metaData.getColumns(null, null, tableName, columnName)) {
+                boolean found = false;
+                while (columns.next()) {
+                    String actualColumnDataType = columns.getString("TYPE_NAME");
 
-            Assertions.assertTrue(rs.next(),
-                    "Table " + tableName + " SHOULD have required " + dataType + " " + columnName + " column");
+                    // Replace the alias 'int4' with 'int' to ensure consistency in type naming
+                    if ("int4".equals(actualColumnDataType)) {
+                        actualColumnDataType = "int";
+                    }
+                    System.out.println(actualColumnDataType);
+                    if (actualColumnDataType.equalsIgnoreCase(dataType)) {
+                        found = true;
+                        break;
+                    }
+                }
 
+                Assertions.assertTrue(found,
+                        "Table " + tableName + " SHOULD have required " + dataType + " " + columnName + " column");
+
+            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -211,11 +226,6 @@ public class DatabaseDefinitionSteps {
 
     private void verifyAllCreatedTableHavePK(String type, String columnName) {
         Set<String> tablesMissingPK = new HashSet<>();
-
-        // Create a mapping of PostgreSQL type names to human-readable names
-        Map<String, String> typeMapping = new HashMap<>();
-        typeMapping.put("int8", "bigint");
-        typeMapping.put("int4", "integer");
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
@@ -229,18 +239,18 @@ public class DatabaseDefinitionSteps {
                         while (primaryKeys.next()) {
                             String pkColumnName = primaryKeys.getString("COLUMN_NAME");
 
-                            System.out.println("column " + pkColumnName);
-
                             try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, tableName,
                                     pkColumnName)) {
                                 if (columns.next()) {
                                     String actualDataType = columns.getString("TYPE_NAME");
-                                    String mapDataType = typeMapping.getOrDefault(actualDataType.toLowerCase(),
-                                            actualDataType);
-                                    System.out.println("type " + actualDataType);
+
+                                    // Replace the alias 'int8' with 'bigint' to ensure consistency in type naming
+                                    if ("int8".equals(actualDataType)) {
+                                        actualDataType = "bigint";
+                                    }
 
                                     if (pkColumnName.equalsIgnoreCase(columnName)
-                                            && mapDataType.equalsIgnoreCase(type)) {
+                                            && actualDataType.equalsIgnoreCase(type)) {
                                         pkFound = true;
                                         break;
                                     }
