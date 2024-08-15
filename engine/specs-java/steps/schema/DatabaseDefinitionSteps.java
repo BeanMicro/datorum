@@ -18,6 +18,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import io.beandev.datorum.CreatePostgres;
 import io.beandev.datorum.schema.jdbc.JdbcSchemaRepository;
+import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
@@ -47,116 +48,73 @@ public class DatabaseDefinitionSteps {
         jdbcSchemaRepository.createBaseTables();
     }
 
-    @Then("schema {word} SHOULD be created")
+    @Then("schema {schemaName} SHOULD be created")
     public void schemaShouldBeCreated(String schemaName) {
         checkSchemaExist(schemaName);
     }
 
-    @And("table app SHOULD be created in schema datorum_schema")
-    public void tableAppShouldBeCreatedInSchemaDatorumSchema() {
-        String tableName = "app";
-        String schemaName = "datorum_schema";
-        verifyTableAppInSchema(tableName, schemaName);
+    @And("table {tableName} SHOULD be created in schema {schemaName}")
+    public void tableShouldBeCreatedInSchemaDatorumSchema(String tableName, String schemaName) {
+        verifyTableInSchema(tableName, schemaName);
     }
 
-    @And("table context SHOULD be created in schema datorum_schema")
-    public void tableContextShouldBeCreatedInSchemaDatorumSchema() {
-        String tableName = "context";
-        String schemaName = "datorum_schema";
-        verifyTableContextInSchema(tableName, schemaName);
+    @And("table {tableName} SHOULD have {columnName} column reference table {referencedTableName}'s primary key")
+    public void tableShouldHaveColumnReferenceTablePrimaryKey(String tableName, String columnName,
+            String referencedTableName) {
+
+        verifyTableHaveColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
     }
 
-    @And("table context SHOULD have app_id column reference table app's primary key")
-    public void tableContextShouldHaveAppIdColumnReferenceTableAppPrimaryKey() {
-        String tableName = "context";
-        String columnName = "app_id";
-        String referenceTableName = "app";
-        verifyTableContextHaveColumnReferenceToPrimaryKey(tableName, columnName, referenceTableName);
+    @And("table {tableName} SHOULD have required {dataType}\\({int}\\) {columnName} column")
+    public void tableShouldHaveRequiredDataTypeColumn(String tableName, String dataType,
+            Integer length, String columnName) {
+
+        verifyTableHaveRequiredDataTypeAndNameColumn(tableName, columnName, dataType, length);
+
     }
 
-    @And("table aggregate SHOULD be created in schema datorum_schema")
-    public void tableAggregateShouldBeCreatedInSchemaDatorumSchema() {
-        String tableName = "aggregate";
-        String schemaName = "datorum_schema";
-        verifyTableAggregateInSchema(tableName, schemaName);
+    @And("table {tableName} SHOULD have {dataType} {columnName} column")
+    public void tableShouldHaveDataTypeColumn(String tableName, String dataType, String columnName) {
+
+        verifyTableHaveDataTypeAndNameColumn(tableName, columnName, dataType);
     }
 
-    @And("table aggregate SHOULD have context_id column reference table context's primary key")
-    public void tableAggregateShouldHaveContextIdColumnReferenceTableContextPrimaryKey() {
-        String tableName = "aggregate";
-        String columnName = "context_id";
-        String referenceTableName = "context";
-        verifyTableAggregateHaveColumnReferenceToPrimaryKey(tableName, columnName, referenceTableName);
-    }
+    @And("all the created tables SHOULD have primary key {dataType} {columnName} column")
+    public void allTheCreatedTablesShouldHavePrimaryKeyBigintIdColumn(String dataType, String columnName) {
 
-    @And("table entity SHOULD be created in schema datorum_schema")
-    public void tableEntityShouldBeCreatedInSchemaDatorumSchema() {
-        String tableName = "entity";
-        String schemaName = "datorum_schema";
-        verifyTableEntityInSchema(tableName, schemaName);
-    }
-
-    @And("table entity SHOULD have aggregate_id column reference table aggregate's primary key")
-    public void tableEntityShouldHaveAggregateIdColumnReferenceTableAggregatePrimaryKey() {
-        String tableName = "entity";
-        String columnName = "aggregate_id";
-        String referenceTableName = "aggregate";
-        verifyTableEntityHaveColumnReferenceToPrimaryKey(tableName, columnName, referenceTableName);
-    }
-
-    @And("table attribute SHOULD be created in schema datorum_schema")
-    public void tableAttributeShouldBeCreatedInSchemaDatorumSchema() {
-        String tableName = "attribute";
-        String schemaName = "datorum_schema";
-        verifyTableAttributeInSchema(tableName, schemaName);
-    }
-
-    @And("table attribute SHOULD have entity_id column reference table entity's primary key")
-    public void tableAttributeShouldHaveEntityIdColumnReferenceTableEntityPrimaryKey() {
-        String tableName = "attribute";
-        String columnName = "entity_id";
-        String referenceTableName = "entity";
-        verifyTableAttributeHaveColumnReferenceToPrimaryKey(tableName, columnName, referenceTableName);
-    }
-
-    @And("table attribute SHOULD have required VARCHAR\\(25\\) datatype_name column")
-    public void tableAttributeShouldHaveRequiredVarcharDatatypeNameColumn() {
-        String tableName = "attribute";
-        String columnName = "datatype_name";
-        String dataType = "VARCHAR";
-        Integer length = 25;
-        verifyTableAttributeHaveDataTypeNameColumn(tableName, columnName, dataType, length);
-    }
-
-    @And("table attribute SHOULD have INT datatype_length column")
-    public void tableAttributeShouldHaveIntDatatypeLengthColumn() {
-        String tableName = "attribute";
-        String columnName = "datatype_length";
-        String dataType = "INT";
-        verifyTableAttributeHaveDataTypeLengthColumn(tableName, columnName, dataType);
-    }
-
-    @And("table attribute SHOULD have INT datatype_scale column")
-    public void tableAttributeShouldHaveIntDatatypeScaleColumn() {
-        String tableName = "attribute";
-        String columnName = "datatype_scale";
-        String dataType = "INT";
-        verifyTableAttributeHaveDataTypeScaleColumn(tableName, columnName, dataType);
-    }
-
-    @And("all the created tables SHOULD have primary key BIGINT id column")
-    public void allTheCreatedTablesShouldHavePrimaryKeyBigintIdColumn() {
-        String columnName = "id";
-        String dataType = "BIGINT";
         verifyAllCreatedTableHavePrimaryKey(columnName, dataType);
     }
 
-    @And("all the created tables SHOULD have required VARCHAR\\(250\\) name column")
-    public void allTheCreatedTablesShouldHaveRequiredVarcharNameColumn() {
-        String columnName = "name";
-        String dataType = "VARCHAR";
-        Integer length = 250;
-        verifyAllCreatedTableHaveNameColumn(columnName, dataType, length);
+    @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
+    public void allTheCreatedTablesShouldHaveRequiredVarcharNameColumn(String dataType, Integer length,
+            String columnName) {
+
+        verifyAllCreatedTableHaveRequiredDataTypeColumn(columnName, dataType, length);
+    }
+
+    @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
+    public String tableName(String table) {
+        return table;
+    }
+
+    @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
+    public String referencedTableName(String referencedTable) {
+        return referencedTable;
+    }
+
+    @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
+    public String schemaName(String schema) {
+        return schema;
+    }
+
+    @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
+    public String columnName(String column) {
+        return column;
+    }
+
+    @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
+    public String dataType(String type) {
+        return type;
     }
 
     private HikariDataSource dataSource() {
@@ -202,7 +160,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableAppInSchema(String tableName, String schemaName) {
+    private void verifyTableInSchema(String tableName, String schemaName) {
         String verifyTableQuery = "SELECT table_name FROM information_schema.tables " +
                 "WHERE table_schema = '" + schemaName + "' " +
                 "AND table_name = '" + tableName + "'";
@@ -217,67 +175,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableContextInSchema(String tableName, String schemaName) {
-        String verifyTableQuery = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = '" + schemaName + "' " +
-                "AND table_name = '" + tableName + "'";
-        try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(verifyTableQuery);
-                ResultSet rs = pst.executeQuery()) {
-
-            Assertions.assertTrue(rs.next(), "Table " + tableName + " should exist in schema" + schemaName);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void verifyTableEntityInSchema(String tableName, String schemaName) {
-        String verifyTableQuery = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = '" + schemaName + "' " +
-                "AND table_name = '" + tableName + "'";
-        try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(verifyTableQuery);
-                ResultSet rs = pst.executeQuery()) {
-
-            Assertions.assertTrue(rs.next(), "Table " + tableName + " should exist in schema" + schemaName);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void verifyTableAggregateInSchema(String tableName, String schemaName) {
-        String verifyTableQuery = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = '" + schemaName + "' " +
-                "AND table_name = '" + tableName + "'";
-        try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(verifyTableQuery);
-                ResultSet rs = pst.executeQuery()) {
-
-            Assertions.assertTrue(rs.next(), "Table " + tableName + " should exist in schema" + schemaName);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void verifyTableAttributeInSchema(String tableName, String schemaName) {
-        String verifyTableQuery = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = '" + schemaName + "' " +
-                "AND table_name = '" + tableName + "'";
-        try (Connection con = dataSource.getConnection();
-                PreparedStatement pst = con.prepareStatement(verifyTableQuery);
-                ResultSet rs = pst.executeQuery()) {
-
-            Assertions.assertTrue(rs.next(), "Table " + tableName + " should exist in schema" + schemaName);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void verifyTableContextHaveColumnReferenceToPrimaryKey(String tableName, String columnName,
+    private void verifyTableHaveColumnReferenceToTablePrimaryKey(String tableName, String columnName,
             String referencedTableName) {
 
         try (Connection con = dataSource.getConnection()) {
@@ -304,88 +202,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableEntityHaveColumnReferenceToPrimaryKey(String tableName, String columnName,
-            String referencedTableName) {
-
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
-
-            try (ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), null, tableName)) {
-                boolean existingForeignKey = false;
-                while (foreignKeys.next()) {
-                    String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-                    String pkTableName = foreignKeys.getString("PKTABLE_NAME");
-
-                    if (fkColumnName.equals(columnName) && pkTableName.equals(referencedTableName)) {
-                        existingForeignKey = true;
-                        break;
-                    }
-                }
-
-                Assertions.assertTrue(existingForeignKey,
-                        "Table " + tableName + " should have " + columnName + " column reference table "
-                                + referencedTableName + "'s primary key");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void verifyTableAggregateHaveColumnReferenceToPrimaryKey(String tableName, String columnName,
-            String referencedTableName) {
-
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
-
-            try (ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), null, tableName)) {
-                boolean existingForeignKey = false;
-                while (foreignKeys.next()) {
-                    String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-                    String pkTableName = foreignKeys.getString("PKTABLE_NAME");
-
-                    if (fkColumnName.equals(columnName) && pkTableName.equals(referencedTableName)) {
-                        existingForeignKey = true;
-                        break;
-                    }
-                }
-
-                Assertions.assertTrue(existingForeignKey,
-                        "Table " + tableName + " should have " + columnName + " column reference table "
-                                + referencedTableName + "'s primary key");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void verifyTableAttributeHaveColumnReferenceToPrimaryKey(String tableName, String columnName,
-            String referencedTableName) {
-
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
-
-            try (ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), null, tableName)) {
-                boolean existingForeignKey = false;
-                while (foreignKeys.next()) {
-                    String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-                    String pkTableName = foreignKeys.getString("PKTABLE_NAME");
-
-                    if (fkColumnName.equals(columnName) && pkTableName.equals(referencedTableName)) {
-                        existingForeignKey = true;
-                        break;
-                    }
-                }
-
-                Assertions.assertTrue(existingForeignKey,
-                        "Table " + tableName + " should have " + columnName + " column reference table "
-                                + referencedTableName + "'s primary key");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void verifyTableAttributeHaveDataTypeNameColumn(String tableName, String columnName, String dataType,
+    private void verifyTableHaveRequiredDataTypeAndNameColumn(String tableName, String columnName, String dataType,
             Integer length) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
@@ -412,7 +229,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableAttributeHaveDataTypeLengthColumn(String tableName, String columnName, String dataType) {
+    private void verifyTableHaveDataTypeAndNameColumn(String tableName, String columnName, String dataType) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
@@ -425,36 +242,6 @@ public class DatabaseDefinitionSteps {
                     if ("int4".equals(actualColumnDataType)) {
                         actualColumnDataType = "int";
                     }
-                    System.out.println(actualColumnDataType);
-                    if (actualColumnDataType.equalsIgnoreCase(dataType)) {
-                        found = true;
-                        break;
-                    }
-                }
-
-                Assertions.assertTrue(found,
-                        "Table " + tableName + " SHOULD have " + dataType + " " + columnName + " column");
-
-            }
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void verifyTableAttributeHaveDataTypeScaleColumn(String tableName, String columnName, String dataType) {
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
-
-            try (ResultSet columns = metaData.getColumns(null, null, tableName, columnName)) {
-                boolean found = false;
-                while (columns.next()) {
-                    String actualColumnDataType = columns.getString("TYPE_NAME");
-
-                    // Because in Postgres Integer type is named as 'int4'
-                    if ("int4".equals(actualColumnDataType)) {
-                        actualColumnDataType = "int";
-                    }
-                    System.out.println(actualColumnDataType);
                     if (actualColumnDataType.equalsIgnoreCase(dataType)) {
                         found = true;
                         break;
@@ -523,7 +310,7 @@ public class DatabaseDefinitionSteps {
 
     }
 
-    private void verifyAllCreatedTableHaveNameColumn(String columnName, String dataType, Integer length) {
+    private void verifyAllCreatedTableHaveRequiredDataTypeColumn(String columnName, String dataType, Integer length) {
         Set<String> tablesMissingColumn = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
