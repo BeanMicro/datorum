@@ -34,3 +34,18 @@ sc-pack:
 
 sc-test: sc-pack
 	./gradlew smartcontract:test
+
+test-engine:
+	./gradlew engine:test
+
+check-kind-config-and-create-cluster:
+	@if [ -f ./app/k8s/local/kind.yaml ]; then \
+		if ! kind get clusters | grep -q eventstore; then \
+			kind create cluster --name eventstore --config ./app/k8s/local/kind.yaml; \
+		else \
+			echo "Cluster 'eventstore' already exists."; \
+		fi\
+		else \
+			echo "Kind config file not found!" >&2;\
+			exit 1; \
+	fi 
