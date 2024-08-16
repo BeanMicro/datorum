@@ -8,8 +8,7 @@ import java.sql.SQLException;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -27,6 +26,7 @@ import io.cucumber.java.en.Then;
 public class DatabaseDefinitionSteps {
     private JdbcSchemaRepository jdbcSchemaRepository;
     private HikariDataSource dataSource;
+    private ArrayList<String> createdTableList = new ArrayList<>();
 
     @Given("^a Postgres database without schemas$")
     public void aPostgresDatabaseWithoutSchemas() throws Exception {
@@ -56,6 +56,8 @@ public class DatabaseDefinitionSteps {
     @And("table {tableName} SHOULD be created in schema {schemaName}")
     public void tableShouldBeCreatedInSchemaDatorumSchema(String tableName, String schemaName) {
         verifyTableInSchema(tableName, schemaName);
+
+        createdTableList.add(tableName);
     }
 
     @And("table {tableName} SHOULD have {columnName} column reference table {referencedTableName}'s primary key")
@@ -82,14 +84,14 @@ public class DatabaseDefinitionSteps {
     @And("all the created tables SHOULD have primary key {dataType} {columnName} column")
     public void allTheCreatedTablesShouldHavePrimaryKeyBigintIdColumn(String dataType, String columnName) {
 
-        verifyAllCreatedTableHavePrimaryKey(columnName, dataType);
+        verifyAllCreatedTableHavePrimaryKey(createdTableList, columnName, dataType);
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
     public void allTheCreatedTablesShouldHaveRequiredVarcharNameColumn(String dataType, Integer length,
             String columnName) {
 
-        verifyAllCreatedTableHaveRequiredDataTypeColumn(columnName, dataType, length);
+        verifyAllCreatedTableHaveRequiredDataTypeColumn(createdTableList, columnName, dataType, length);
     }
 
     @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
@@ -257,45 +259,43 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyAllCreatedTableHavePrimaryKey(String columnName, String dataType) {
+    private void verifyAllCreatedTableHavePrimaryKey(ArrayList<String> createdTable, String columnName,
+            String dataType) {
         Set<String> tablesMissingPK = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet tables = metaData.getTables(con.getCatalog(), null, "%", new String[] { "TABLE" })) {
-                while (tables.next()) {
-                    String currentTable = tables.getString("TABLE_NAME");
-                    boolean pkFound = false;
+            for (String currentTable : createdTable) {
 
-                    try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), null, currentTable)) {
-                        while (primaryKeys.next()) {
-                            String pkColumnName = primaryKeys.getString("COLUMN_NAME");
+                boolean pkFound = false;
 
-                            try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, currentTable,
-                                    pkColumnName)) {
-                                if (columns.next()) {
-                                    String actualDataType = columns.getString("TYPE_NAME");
+                try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), null, currentTable)) {
+                    while (primaryKeys.next()) {
+                        String pkColumnName = primaryKeys.getString("COLUMN_NAME");
 
-                                    // Because in Postgres BigInt type is named as 'int8'
-                                    if ("int8".equals(actualDataType)) {
-                                        actualDataType = "bigint";
-                                    }
+                        try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, currentTable,
+                                pkColumnName)) {
+                            if (columns.next()) {
+                                String actualDataType = columns.getString("TYPE_NAME");
 
-                                    // Condition : Primary key 'id' type is BIGINT
-                                    if (pkColumnName.equalsIgnoreCase(columnName)
-                                            && actualDataType.equalsIgnoreCase(dataType)) {
-                                        pkFound = true;
-                                        break;
-                                    }
+                                // Because in Postgres BigInt type is named as 'int8'
+                                if ("int8".equals(actualDataType)) {
+                                    actualDataType = "bigint";
+                                }
+
+                                // Condition : Primary key 'id' type is BIGINT
+                                if (pkColumnName.equalsIgnoreCase(columnName)
+                                        && actualDataType.equalsIgnoreCase(dataType)) {
+                                    pkFound = true;
+                                    break;
                                 }
                             }
                         }
                     }
-
-                    if (!pkFound) {
-                        tablesMissingPK.add(currentTable);
-                    }
+                }
+                if (!pkFound) {
+                    tablesMissingPK.add(currentTable);
                 }
             }
 
@@ -310,32 +310,31 @@ public class DatabaseDefinitionSteps {
 
     }
 
-    private void verifyAllCreatedTableHaveRequiredDataTypeColumn(String columnName, String dataType, Integer length) {
+    private void verifyAllCreatedTableHaveRequiredDataTypeColumn(ArrayList<String> createdTable, String columnName,
+            String dataType, Integer length) {
         Set<String> tablesMissingColumn = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet tables = metaData.getTables(con.getCatalog(), null, "%", new String[] { "TABLE" })) {
-                while (tables.next()) {
-                    String currentTable = tables.getString("TABLE_NAME");
-                    boolean columnFound = false;
+            for (String currentTable : createdTable) {
 
-                    try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, currentTable, columnName)) {
-                        while (columns.next()) {
-                            String actualDataType = columns.getString("TYPE_NAME");
-                            int columnSize = columns.getInt("COLUMN_SIZE");
-                            // Condition : Column 'name' type is varchar(250)
-                            if (actualDataType.equalsIgnoreCase(dataType) && columnSize == length) {
-                                columnFound = true;
-                                break;
-                            }
+                boolean columnFound = false;
+
+                try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, currentTable, columnName)) {
+                    while (columns.next()) {
+                        String actualDataType = columns.getString("TYPE_NAME");
+                        int columnSize = columns.getInt("COLUMN_SIZE");
+                        // Condition : Column 'name' type is varchar(250)
+                        if (actualDataType.equalsIgnoreCase(dataType) && columnSize == length) {
+                            columnFound = true;
+                            break;
                         }
                     }
+                }
 
-                    if (!columnFound) {
-                        tablesMissingColumn.add(currentTable);
-                    }
+                if (!columnFound) {
+                    tablesMissingColumn.add(currentTable);
                 }
             }
 
@@ -349,4 +348,5 @@ public class DatabaseDefinitionSteps {
             throw new RuntimeException("SQL error: " + e.getMessage(), e);
         }
     }
+
 }
