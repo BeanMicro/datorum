@@ -23,7 +23,7 @@ jobs:
     - name: Install and config kind Kubernetes
       uses: container-tools/kind-action@v2.0.4
       with:
-        config: app/k8s/local/db.yaml
+        config: app/k8s/local/kind.yaml
         cluster_name: connectdb
 
     
