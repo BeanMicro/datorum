@@ -259,14 +259,14 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyAllCreatedTableHavePrimaryKey(ArrayList<String> createdTable, String columnName,
+    private void verifyAllCreatedTableHavePrimaryKey(ArrayList<String> createdTables, String columnName,
             String dataType) {
         Set<String> tablesMissingPK = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            for (String currentTable : createdTable) {
+            for (String currentTable : createdTables) {
 
                 boolean pkFound = false;
 
@@ -310,14 +310,14 @@ public class DatabaseDefinitionSteps {
 
     }
 
-    private void verifyAllCreatedTableHaveRequiredDataTypeColumn(ArrayList<String> createdTable, String columnName,
+    private void verifyAllCreatedTableHaveRequiredDataTypeColumn(ArrayList<String> createdTables, String columnName,
             String dataType, Integer length) {
         Set<String> tablesMissingColumn = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            for (String currentTable : createdTable) {
+            for (String currentTable : createdTables) {
 
                 boolean columnFound = false;
 
