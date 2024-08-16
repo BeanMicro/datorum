@@ -122,7 +122,7 @@ public class DatabaseDefinitionSteps {
     private HikariDataSource dataSource() {
         String userName = "postgres";
         String password = "password";
-        String url = "jdbc:postgresql://127.0.0.1:32543/eventstore_db";
+        String url = "jdbc:postgresql://127.0.0.1:30000/eventstore_db";
 
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(url);
@@ -346,6 +346,10 @@ public class DatabaseDefinitionSteps {
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RuntimeException("SQL error: " + e.getMessage(), e);
+        } finally {
+            if (dataSource != null) {
+                dataSource.close();
+            }
         }
     }
 

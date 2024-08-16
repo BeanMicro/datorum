@@ -86,7 +86,7 @@ public class CreatePostgres {
                                 new V1ServicePort()
                                         .port(5432)
                                         .targetPort(new IntOrString(5432))
-                                        .nodePort(32543)
+                                        .nodePort(30000)
                                         .protocol("TCP"))));
     }
 
