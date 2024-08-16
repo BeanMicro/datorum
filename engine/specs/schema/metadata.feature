@@ -31,7 +31,7 @@ Feature: Schema DB
         And table sharding_aggregate SHOULD have aggregate_id column reference table aggregate's primary key
         And table sharding_aggregate SHOULD have SMALLINT size column
 
-        And table table_infix SHOULD be created
+        And table table_infix SHOULD be created in schema datorum_schema
         And table table_infix SHOULD have autoincrement primary key
         And table table_infix SHOULD have BIGINT reference_id column
         And table table_infix SHOULD have required VARCHAR(30) table_infix column
