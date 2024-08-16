@@ -27,7 +27,7 @@ Feature: Schema DB
         And table sharding SHOULD have shard_id column reference table shard's primary key
 
         And table sharding_aggregate SHOULD be created in schema datorum_schema
-        And table sharding_aggregate SHOULD have id column reference table sharding's primary key
+        And table sharding_aggregate SHOULD have sharding_id column reference table sharding's primary key
         And table sharding_aggregate SHOULD have aggregate_id column reference table aggregate's primary key
         And table sharding_aggregate SHOULD have SMALLINT size column
 
