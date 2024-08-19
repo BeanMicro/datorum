@@ -95,9 +95,9 @@ public class DatabaseDefinitionSteps {
     }
 
     @And("table {tableName} SHOULD have UNIQUE constraint on 2 columns {columnName} and {columnName}")
-    public void tableShouldHaveUniqueConstraintColumns(String tableName, String columnNameAggregateId,
-            String columnNameIsRoot) {
-        verifyTableShouldHaveUniqueConstraintOnColumns(tableName, columnNameAggregateId, columnNameIsRoot);
+    public void tableShouldHaveUniqueConstraintColumns(String tableName, String firstColumnName,
+            String secondColumnName) {
+        verifyTableShouldHaveUniqueConstraintOnColumns(tableName, firstColumnName, secondColumnName);
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
@@ -271,20 +271,20 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    public void verifyTableShouldHaveUniqueConstraintOnColumns(String tableName,
-            String columnNameAggregate,
-            String columnNameIsRoot) {
+    public void verifyTableShouldHaveUniqueConstraintOnColumns(String tableName, String firstColumnName,
+            String secondColumnName) {
         try (Connection connection = dataSource.getConnection()) {
             boolean constraintExists = false;
-            boolean columnAggregateIdUnique = isColumnUnique(connection, currentSchema, tableName, columnNameAggregate);
-            boolean columnIsRootUnique = isColumnUnique(connection, currentSchema, tableName, columnNameIsRoot);
-            if (columnAggregateIdUnique && columnIsRootUnique)
+
+            boolean firstUniqueColumn = isColumnUnique(connection, currentSchema, tableName, firstColumnName);
+            boolean secondUniqueColumn = isColumnUnique(connection, currentSchema, tableName, secondColumnName);
+
+            if (firstUniqueColumn && secondUniqueColumn)
                 constraintExists = true;
 
-            Assertions.assertTrue(constraintExists,
-                    "Expected UNIQUE constraint on columns " + columnNameAggregate + " and " + columnNameIsRoot
-                            + " in table "
-                            + tableName);
+            Assertions.assertTrue(constraintExists, "Expected UNIQUE constraint on columns "
+                    + firstColumnName + " and " + secondColumnName + " in table "
+                    + tableName);
 
         } catch (SQLException e) {
             e.printStackTrace();
