@@ -27,6 +27,7 @@ public class DatabaseDefinitionSteps {
     private JdbcSchemaRepository jdbcSchemaRepository;
     private HikariDataSource dataSource;
     private ArrayList<String> createdTableList = new ArrayList<>();
+    private String currentSchema;
 
     @Given("^a Postgres database without schemas$")
     public void aPostgresDatabaseWithoutSchemas() throws Exception {
@@ -58,6 +59,12 @@ public class DatabaseDefinitionSteps {
         verifyTableInSchema(tableName, schemaName);
 
         createdTableList.add(tableName);
+        currentSchema = schemaName;
+    }
+
+    @And("table {tableName} SHOULD have autoincrement primary key")
+    public void tableShouldHaveAutoIncrementPrimaryKey(String tableName) {
+        verifyTableShouldHaveAutoIncrementPrimaryKey(tableName);
     }
 
     @And("table {tableName} SHOULD have {columnName} column reference table {referencedTableName}'s primary key")
@@ -85,6 +92,12 @@ public class DatabaseDefinitionSteps {
     public void allTheCreatedTablesShouldHavePrimaryKeyBigintIdColumn(String dataType, String columnName) {
 
         verifyAllCreatedTableHavePrimaryKey(createdTableList, columnName, dataType);
+    }
+
+    @And("table {tableName} SHOULD have UNIQUE constraint on 2 columns {columnName} and {columnName}")
+    public void tableShouldHaveUniqueConstraintColumns(String tableName, String columnNameAggregateId,
+            String columnNameIsRoot) {
+        verifyTableShouldHaveUniqueConstraintOnColumns(tableName, columnNameAggregateId, columnNameIsRoot);
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
@@ -170,10 +183,37 @@ public class DatabaseDefinitionSteps {
                 PreparedStatement pst = con.prepareStatement(verifyTableQuery);
                 ResultSet rs = pst.executeQuery()) {
 
-            Assertions.assertTrue(rs.next(), "Table " + tableName + " should exist in schema" + schemaName);
+            Assertions.assertTrue(rs.next(), "Table " + tableName + " should exist in schema " + schemaName);
 
         } catch (SQLException ex) {
             ex.printStackTrace();
+        }
+    }
+
+    private void verifyTableShouldHaveAutoIncrementPrimaryKey(String tableName) {
+        try (Connection con = dataSource.getConnection()) {
+            DatabaseMetaData metaData = con.getMetaData();
+
+            ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
+            boolean isAutoIncrement = false;
+
+            while (primaryKeys.next()) {
+                String columnName = primaryKeys.getString("COLUMN_NAME");
+
+                try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
+                    if (columns.next()) {
+                        String isAutoIncrementStr = columns.getString("IS_AUTOINCREMENT");
+                        if ("YES".equals(isAutoIncrementStr)) {
+                            isAutoIncrement = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            Assertions.assertTrue(isAutoIncrement,
+                    "Table " + tableName + " should have autoincrement primary key");
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -183,7 +223,7 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), null, tableName)) {
+            try (ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName)) {
                 boolean existingForeignKey = false;
                 while (foreignKeys.next()) {
                     String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
@@ -209,7 +249,7 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet columns = metaData.getColumns(null, null, tableName, columnName)) {
+            try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
                 boolean found = false;
                 while (columns.next()) {
                     String actualColumnDataType = columns.getString("TYPE_NAME");
@@ -231,19 +271,61 @@ public class DatabaseDefinitionSteps {
         }
     }
 
+    public void verifyTableShouldHaveUniqueConstraintOnColumns(String tableName,
+            String columnNameAggregate,
+            String columnNameIsRoot) {
+        try (Connection connection = dataSource.getConnection()) {
+            boolean constraintExists = false;
+            boolean columnAggregateIdUnique = isColumnUnique(connection, currentSchema, tableName, columnNameAggregate);
+            boolean columnIsRootUnique = isColumnUnique(connection, currentSchema, tableName, columnNameIsRoot);
+            if (columnAggregateIdUnique && columnIsRootUnique)
+                constraintExists = true;
+
+            Assertions.assertTrue(constraintExists,
+                    "Expected UNIQUE constraint on columns " + columnNameAggregate + " and " + columnNameIsRoot
+                            + " in table "
+                            + tableName);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public boolean isColumnUnique(Connection conn, String schemaName, String tableName, String columnName)
+            throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        try (ResultSet rs = metaData.getIndexInfo(null, schemaName, tableName, true, false)) {
+            while (rs.next()) {
+                String indexColumnName = rs.getString("COLUMN_NAME");
+                boolean isUnique = !rs.getBoolean("NON_UNIQUE");
+                if (columnName.equals(indexColumnName) && isUnique) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void verifyTableHaveDataTypeAndNameColumn(String tableName, String columnName, String dataType) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet columns = metaData.getColumns(null, null, tableName, columnName)) {
+            try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
                 boolean found = false;
                 while (columns.next()) {
                     String actualColumnDataType = columns.getString("TYPE_NAME");
 
-                    // Because in Postgres Integer type is named as 'int4'
+                    // Normalize the data type names
                     if ("int4".equals(actualColumnDataType)) {
                         actualColumnDataType = "int";
+                    } else if ("int8".equals(actualColumnDataType)) {
+                        actualColumnDataType = "bigint";
+                    } else if ("int2".equals(actualColumnDataType)) {
+                        actualColumnDataType = "smallint";
+                    } else if ("bool".equals(actualColumnDataType)) {
+                        actualColumnDataType = "boolean";
                     }
+
                     if (actualColumnDataType.equalsIgnoreCase(dataType)) {
                         found = true;
                         break;
@@ -270,11 +352,11 @@ public class DatabaseDefinitionSteps {
 
                 boolean pkFound = false;
 
-                try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), null, currentTable)) {
+                try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), currentSchema, currentTable)) {
                     while (primaryKeys.next()) {
                         String pkColumnName = primaryKeys.getString("COLUMN_NAME");
 
-                        try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, currentTable,
+                        try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
                                 pkColumnName)) {
                             if (columns.next()) {
                                 String actualDataType = columns.getString("TYPE_NAME");
@@ -321,7 +403,8 @@ public class DatabaseDefinitionSteps {
 
                 boolean columnFound = false;
 
-                try (ResultSet columns = metaData.getColumns(con.getCatalog(), null, currentTable, columnName)) {
+                try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
+                        columnName)) {
                     while (columns.next()) {
                         String actualDataType = columns.getString("TYPE_NAME");
                         int columnSize = columns.getInt("COLUMN_SIZE");
