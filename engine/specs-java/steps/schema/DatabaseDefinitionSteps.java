@@ -197,7 +197,7 @@ public class DatabaseDefinitionSteps {
             ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
             boolean isAutoIncrement = false;
 
-            while (primaryKeys.next()) {
+            if (primaryKeys.next()) {
                 String columnName = primaryKeys.getString("COLUMN_NAME");
 
                 try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
@@ -205,7 +205,6 @@ public class DatabaseDefinitionSteps {
                         String isAutoIncrementStr = columns.getString("IS_AUTOINCREMENT");
                         if ("YES".equals(isAutoIncrementStr)) {
                             isAutoIncrement = true;
-                            break;
                         }
                     }
                 }
@@ -251,13 +250,12 @@ public class DatabaseDefinitionSteps {
 
             try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
                 boolean found = false;
-                while (columns.next()) {
+                if (columns.next()) {
                     String actualColumnDataType = columns.getString("TYPE_NAME");
                     int columnLength = columns.getInt("COLUMN_SIZE");
 
                     if (actualColumnDataType.equalsIgnoreCase(dataType) && columnLength == length) {
                         found = true;
-                        break;
                     }
                 }
 
@@ -297,8 +295,7 @@ public class DatabaseDefinitionSteps {
         try (ResultSet rs = metaData.getIndexInfo(null, schemaName, tableName, true, false)) {
             while (rs.next()) {
                 String indexColumnName = rs.getString("COLUMN_NAME");
-                boolean isUnique = !rs.getBoolean("NON_UNIQUE");
-                if (columnName.equals(indexColumnName) && isUnique) {
+                if (columnName.equals(indexColumnName)) {
                     return true;
                 }
             }
@@ -312,7 +309,7 @@ public class DatabaseDefinitionSteps {
 
             try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
                 boolean found = false;
-                while (columns.next()) {
+                if (columns.next()) {
                     String actualColumnDataType = columns.getString("TYPE_NAME");
 
                     // Normalize the data type names
@@ -328,7 +325,6 @@ public class DatabaseDefinitionSteps {
 
                     if (actualColumnDataType.equalsIgnoreCase(dataType)) {
                         found = true;
-                        break;
                     }
                 }
 
@@ -353,7 +349,7 @@ public class DatabaseDefinitionSteps {
                 boolean pkFound = false;
 
                 try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), currentSchema, currentTable)) {
-                    while (primaryKeys.next()) {
+                    if (primaryKeys.next()) {
                         String pkColumnName = primaryKeys.getString("COLUMN_NAME");
 
                         try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
@@ -370,7 +366,6 @@ public class DatabaseDefinitionSteps {
                                 if (pkColumnName.equalsIgnoreCase(columnName)
                                         && actualDataType.equalsIgnoreCase(dataType)) {
                                     pkFound = true;
-                                    break;
                                 }
                             }
                         }
@@ -405,13 +400,12 @@ public class DatabaseDefinitionSteps {
 
                 try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
                         columnName)) {
-                    while (columns.next()) {
+                    if (columns.next()) {
                         String actualDataType = columns.getString("TYPE_NAME");
                         int columnSize = columns.getInt("COLUMN_SIZE");
                         // Condition : Column 'name' type is varchar(250)
                         if (actualDataType.equalsIgnoreCase(dataType) && columnSize == length) {
                             columnFound = true;
-                            break;
                         }
                     }
                 }
