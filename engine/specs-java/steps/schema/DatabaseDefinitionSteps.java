@@ -197,20 +197,25 @@ public class DatabaseDefinitionSteps {
             ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
             boolean isAutoIncrement = false;
 
-            if (primaryKeys.next()) {
-                String columnName = primaryKeys.getString("COLUMN_NAME");
-
-                try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
-                    if (columns.next()) {
-                        String isAutoIncrementStr = columns.getString("IS_AUTOINCREMENT");
-                        if ("YES".equals(isAutoIncrementStr)) {
-                            isAutoIncrement = true;
-                        }
-                    }
-                }
+            if (!primaryKeys.next()) {
+                Assertions.fail("Table " + tableName + " should have primary key.");
             }
-            Assertions.assertTrue(isAutoIncrement,
-                    "Table " + tableName + " should have autoincrement primary key");
+
+            String columnName = primaryKeys.getString("COLUMN_NAME");
+            try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
+                if (!columns.next()) {
+                    Assertions.fail("Table " + tableName + " should have primary key column " + columnName);
+                }
+
+                String isAutoIncrementStr = columns.getString("IS_AUTOINCREMENT");
+
+                if ("NO".equals(isAutoIncrementStr)) {
+                    Assertions.fail("Primary key " + columnName + " should have autoincrement ");
+                }
+
+                isAutoIncrement = true;
+                Assertions.assertTrue(isAutoIncrement);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -228,15 +233,17 @@ public class DatabaseDefinitionSteps {
                     String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
                     String pkTableName = foreignKeys.getString("PKTABLE_NAME");
 
-                    if (fkColumnName.equals(columnName) && pkTableName.equals(referencedTableName)) {
-                        existingForeignKey = true;
-                        break;
+                    if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
+                        continue;
                     }
+
+                    existingForeignKey = true;
+                    break;
                 }
 
                 Assertions.assertTrue(existingForeignKey,
-                        "Table " + tableName + " should have " + columnName + " column reference table "
-                                + referencedTableName + "'s primary key");
+                        "There is no " + columnName + " column reference table " + referencedTableName
+                                + "'s primary key");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -250,18 +257,25 @@ public class DatabaseDefinitionSteps {
 
             try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
                 boolean found = false;
-                if (columns.next()) {
-                    String actualColumnDataType = columns.getString("TYPE_NAME");
-                    int columnLength = columns.getInt("COLUMN_SIZE");
-
-                    if (actualColumnDataType.equalsIgnoreCase(dataType) && columnLength == length) {
-                        found = true;
-                    }
+                if (!columns.next()) {
+                    Assertions.fail("Table " + tableName + " should have column " + columnName);
                 }
 
-                Assertions.assertTrue(found,
-                        "Table " + tableName + " SHOULD have required " + dataType + "(" + length + ") " + columnName
-                                + " column");
+                String actualColumnDataType = columns.getString("TYPE_NAME");
+                int columnLength = columns.getInt("COLUMN_SIZE");
+
+                if (!actualColumnDataType.equalsIgnoreCase(dataType)) {
+                    Assertions.fail("Column " + columnName + " should have datatype " + dataType
+                            + ". But actual datatype we got is " + actualColumnDataType);
+                }
+
+                if (columnLength != length) {
+                    Assertions.fail("Datatype " + dataType + " length should be " + length
+                            + ". But actual length we got is " + columnLength);
+                }
+
+                found = true;
+                Assertions.assertTrue(found);
 
             }
         } catch (SQLException ex) {
@@ -277,12 +291,14 @@ public class DatabaseDefinitionSteps {
             boolean firstUniqueColumn = isColumnUnique(connection, currentSchema, tableName, firstColumnName);
             boolean secondUniqueColumn = isColumnUnique(connection, currentSchema, tableName, secondColumnName);
 
-            if (firstUniqueColumn && secondUniqueColumn)
-                constraintExists = true;
+            if (!firstUniqueColumn)
+                Assertions.fail("Column " + firstColumnName + " has not UNIQUE");
 
-            Assertions.assertTrue(constraintExists, "Expected UNIQUE constraint on columns "
-                    + firstColumnName + " and " + secondColumnName + " in table "
-                    + tableName);
+            if (!secondUniqueColumn)
+                Assertions.fail("Column " + secondColumnName + " has not UNIQUE");
+
+            constraintExists = true;
+            Assertions.assertTrue(constraintExists);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -309,28 +325,37 @@ public class DatabaseDefinitionSteps {
 
             try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
                 boolean found = false;
-                if (columns.next()) {
-                    String actualColumnDataType = columns.getString("TYPE_NAME");
-
-                    // Normalize the data type names
-                    if ("int4".equals(actualColumnDataType)) {
-                        actualColumnDataType = "int";
-                    } else if ("int8".equals(actualColumnDataType)) {
-                        actualColumnDataType = "bigint";
-                    } else if ("int2".equals(actualColumnDataType)) {
-                        actualColumnDataType = "smallint";
-                    } else if ("bool".equals(actualColumnDataType)) {
-                        actualColumnDataType = "boolean";
-                    }
-
-                    if (actualColumnDataType.equalsIgnoreCase(dataType)) {
-                        found = true;
-                    }
+                if (!columns.next()) {
+                    Assertions.fail("Table " + tableName + "should have column " + columnName);
                 }
 
-                Assertions.assertTrue(found,
-                        "Table " + tableName + " SHOULD have " + dataType + " " + columnName + " column");
+                String actualColumnDataType = columns.getString("TYPE_NAME");
 
+                // Normalize the data type names
+                switch (actualColumnDataType) {
+                    case "int4":
+                        actualColumnDataType = "int";
+                        break;
+                    case "int8":
+                        actualColumnDataType = "bigint";
+                        break;
+                    case "int2":
+                        actualColumnDataType = "smallint";
+                        break;
+                    case "bool":
+                        actualColumnDataType = "boolean";
+                        break;
+                    default:
+                        break;
+                }
+
+                if (!actualColumnDataType.equalsIgnoreCase(dataType)) {
+                    Assertions.fail("Column " + columnName + " should have datatype " + dataType
+                            + ".But datatype we got is " + actualColumnDataType);
+                }
+
+                found = true;
+                Assertions.assertTrue(found);
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -339,46 +364,49 @@ public class DatabaseDefinitionSteps {
 
     private void verifyAllCreatedTableHavePrimaryKey(ArrayList<String> createdTables, String columnName,
             String dataType) {
-        Set<String> tablesMissingPK = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
+            boolean allPKFound = false;
 
             for (String currentTable : createdTables) {
 
-                boolean pkFound = false;
-
                 try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), currentSchema, currentTable)) {
-                    if (primaryKeys.next()) {
-                        String pkColumnName = primaryKeys.getString("COLUMN_NAME");
+                    if (!primaryKeys.next()) {
+                        Assertions.fail("Table " + currentTable + " should have primary key");
+                    }
 
-                        try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
-                                pkColumnName)) {
-                            if (columns.next()) {
-                                String actualDataType = columns.getString("TYPE_NAME");
+                    String pkColumnName = primaryKeys.getString("COLUMN_NAME");
 
-                                // Because in Postgres BigInt type is named as 'int8'
-                                if ("int8".equals(actualDataType)) {
-                                    actualDataType = "bigint";
-                                }
+                    if (!pkColumnName.equalsIgnoreCase(columnName)) {
+                        Assertions.fail("Primary Key should have column" + columnName
+                                + ". But the column we got is " + pkColumnName);
+                    }
 
-                                // Condition : Primary key 'id' type is BIGINT
-                                if (pkColumnName.equalsIgnoreCase(columnName)
-                                        && actualDataType.equalsIgnoreCase(dataType)) {
-                                    pkFound = true;
-                                }
-                            }
+                    try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
+                            pkColumnName)) {
+                        if (!columns.next()) {
+                            Assertions.fail("Table " + currentTable
+                                    + " should have primary key column " + pkColumnName);
                         }
+
+                        String actualDataType = columns.getString("TYPE_NAME");
+
+                        // Because in Postgres BigInt type is named as 'int8'
+                        if ("int8".equals(actualDataType)) {
+                            actualDataType = "bigint";
+                        }
+
+                        if (!actualDataType.equalsIgnoreCase(dataType)) {
+                            Assertions.fail("Primary Key should have datatype" + dataType
+                                    + ". But the datatype we got is " + actualDataType);
+                        }
+
                     }
                 }
-                if (!pkFound) {
-                    tablesMissingPK.add(currentTable);
-                }
             }
-
-            Assertions.assertTrue(tablesMissingPK.isEmpty(),
-                    "Some tables are missing the primary key '" + columnName + "' of type " + dataType + ": "
-                            + tablesMissingPK);
+            allPKFound = true;
+            Assertions.assertTrue(allPKFound);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -389,36 +417,39 @@ public class DatabaseDefinitionSteps {
 
     private void verifyAllCreatedTableHaveRequiredDataTypeColumn(ArrayList<String> createdTables, String columnName,
             String dataType, Integer length) {
-        Set<String> tablesMissingColumn = new HashSet<>();
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
+            boolean allColumnFound = false;
 
             for (String currentTable : createdTables) {
 
-                boolean columnFound = false;
-
                 try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
                         columnName)) {
-                    if (columns.next()) {
-                        String actualDataType = columns.getString("TYPE_NAME");
-                        int columnSize = columns.getInt("COLUMN_SIZE");
-                        // Condition : Column 'name' type is varchar(250)
-                        if (actualDataType.equalsIgnoreCase(dataType) && columnSize == length) {
-                            columnFound = true;
-                        }
-                    }
-                }
 
-                if (!columnFound) {
-                    tablesMissingColumn.add(currentTable);
+                    if (!columns.next()) {
+                        Assertions.fail("Table " + currentTable + " should have column " + columnName);
+                    }
+
+                    String actualDataType = columns.getString("TYPE_NAME");
+
+                    int columnSize = columns.getInt("COLUMN_SIZE");
+
+                    if (!actualDataType.equalsIgnoreCase(dataType)) {
+                        Assertions.fail("Column " + columnName + " should have datatype " + dataType
+                                + ". But the datatype we got is " + actualDataType);
+                    }
+
+                    if (columnSize != length) {
+                        Assertions.fail("Datatype " + dataType + " length should be " + length
+                                + ". But the length we got is " + columnSize);
+                    }
+
                 }
             }
 
-            Assertions.assertTrue(tablesMissingColumn.isEmpty(),
-                    "Some tables are missing the column '" + columnName + "' of type " + dataType + "(" + length
-                            + ") : "
-                            + tablesMissingColumn);
+            allColumnFound = true;
+            Assertions.assertTrue(allColumnFound);
 
         } catch (SQLException e) {
             e.printStackTrace();
