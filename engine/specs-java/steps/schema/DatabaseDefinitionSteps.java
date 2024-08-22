@@ -6,9 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -28,6 +27,11 @@ public class DatabaseDefinitionSteps {
     private HikariDataSource dataSource;
     private ArrayList<String> createdTableList = new ArrayList<>();
     private String currentSchema;
+    private static final Map<String, String> TYPE_MAPPING = Map.of(
+            "int4", "int",
+            "int8", "bigint",
+            "int2", "smallint",
+            "bool", "boolean");
 
     @Given("^a Postgres database without schemas$")
     public void aPostgresDatabaseWithoutSchemas() throws Exception {
@@ -64,28 +68,28 @@ public class DatabaseDefinitionSteps {
 
     @And("table {tableName} SHOULD have autoincrement primary key")
     public void tableShouldHaveAutoIncrementPrimaryKey(String tableName) {
-        verifyTableShouldHaveAutoIncrementPrimaryKey(tableName);
+        verifyTableShouldHasAutoIncrementPrimaryKey(tableName);
     }
 
     @And("table {tableName} SHOULD have {columnName} column reference table {referencedTableName}'s primary key")
     public void tableShouldHaveColumnReferenceTablePrimaryKey(String tableName, String columnName,
             String referencedTableName) {
 
-        verifyTableHaveColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
+        verifyTableHasColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
     }
 
     @And("table {tableName} SHOULD have required {dataType}\\({int}\\) {columnName} column")
     public void tableShouldHaveRequiredDataTypeColumn(String tableName, String dataType,
             Integer length, String columnName) {
 
-        verifyTableHaveRequiredDataTypeAndNameColumn(tableName, columnName, dataType, length);
+        verifyTableHasRequiredDataTypeAndNameColumn(tableName, columnName, dataType, length);
 
     }
 
     @And("table {tableName} SHOULD have {dataType} {columnName} column")
     public void tableShouldHaveDataTypeColumn(String tableName, String dataType, String columnName) {
 
-        verifyTableHaveDataTypeAndNameColumn(tableName, columnName, dataType);
+        verifyTableHasDataTypeAndNameColumn(tableName, columnName, dataType);
     }
 
     @And("all the created tables SHOULD have primary key {dataType} {columnName} column")
@@ -97,13 +101,12 @@ public class DatabaseDefinitionSteps {
     @And("table {tableName} SHOULD have UNIQUE constraint on 2 columns {columnName} and {columnName}")
     public void tableShouldHaveUniqueConstraintColumns(String tableName, String firstColumnName,
             String secondColumnName) {
-        verifyTableShouldHaveUniqueConstraintOnColumns(tableName, firstColumnName, secondColumnName);
+        verifyTableShouldHasUniqueConstraintOnColumns(tableName, firstColumnName, secondColumnName);
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
     public void allTheCreatedTablesShouldHaveRequiredVarcharNameColumn(String dataType, Integer length,
             String columnName) {
-
         verifyAllCreatedTableHaveRequiredDataTypeColumn(createdTableList, columnName, dataType, length);
     }
 
@@ -190,100 +193,146 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableShouldHaveAutoIncrementPrimaryKey(String tableName) {
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
+    private void verifyColumnDataType(ResultSet rs, String columnName, String expectedDataType) {
+        try {
+            String typeName = rs.getString("TYPE_NAME");
+            String actualColumnDataType = TYPE_MAPPING.getOrDefault(typeName, typeName);
+            Assertions.assertEquals(expectedDataType.toLowerCase(), actualColumnDataType,
+                    "Column " + columnName + " should have datatype " + expectedDataType
+                            + ". But datatype we got is " + actualColumnDataType);
 
-            ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
-            boolean isAutoIncrement = false;
-
-            if (!primaryKeys.next()) {
-                Assertions.fail("Table " + tableName + " should have primary key.");
-            }
-
-            String columnName = primaryKeys.getString("COLUMN_NAME");
-            try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
-                if (!columns.next()) {
-                    Assertions.fail("Table " + tableName + " should have primary key column " + columnName);
-                }
-
-                String isAutoIncrementStr = columns.getString("IS_AUTOINCREMENT");
-
-                if ("NO".equals(isAutoIncrementStr)) {
-                    Assertions.fail("Primary key " + columnName + " should have autoincrement ");
-                }
-
-                isAutoIncrement = true;
-                Assertions.assertTrue(isAutoIncrement);
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void verifyTableHaveColumnReferenceToTablePrimaryKey(String tableName, String columnName,
+    private void verifyColumnName(ResultSet rs, String expectedColumnName) {
+        try {
+            String actualColumnName = rs.getString("COLUMN_NAME");
+            Assertions.assertEquals(expectedColumnName, actualColumnName,
+                    "Primary key should have column " + expectedColumnName + ". But the column we got is "
+                            + actualColumnName);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void verifyColumnLength(ResultSet rs, String columnName, Integer expectedColumnLength) {
+        try {
+            int actualColumnLength = rs.getInt("COLUMN_SIZE");
+            Assertions.assertEquals(expectedColumnLength, actualColumnLength,
+                    "Column " + columnName + " should have datatype " + expectedColumnLength
+                            + ". But datatype we got is " + actualColumnLength);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void verifyAutoIncrement(ResultSet rs, String columnName) {
+        try {
+            String actualAutoIncrement = rs.getString("IS_AUTOINCREMENT");
+
+            Assertions.assertEquals("YES", actualAutoIncrement,
+                    "Primary key " + columnName + " should have autoincrement");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private ResultSet verifiedPrimaryKeys(DatabaseMetaData metaData, String tableName) {
+        try {
+            ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
+            if (!primaryKeys.next()) {
+                Assertions.fail("Table " + tableName + " should have primary key.");
+            }
+
+            return primaryKeys;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Assertions.fail("An error occurred while retrieving primary key information.");
+            return null;
+        }
+    }
+
+    private ResultSet verifiedColumns(DatabaseMetaData metaData, String tableName, String columnName) {
+        try {
+            ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName);
+
+            if (!columns.next()) {
+                Assertions.fail("Table " + tableName + " should have primary key column " + columnName);
+            }
+
+            return columns;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Assertions.fail("An error occurred while retrieving primary key information.");
+            return null;
+        }
+    }
+
+    private void verifyTableShouldHasAutoIncrementPrimaryKey(String tableName) {
+        try (Connection con = dataSource.getConnection()) {
+            DatabaseMetaData metaData = con.getMetaData();
+
+            ResultSet primaryKeys = verifiedPrimaryKeys(metaData, tableName);
+
+            String columnName = primaryKeys.getString("COLUMN_NAME");
+
+            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
+
+            verifyAutoIncrement(columns, columnName);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void verifyTableHasColumnReferenceToTablePrimaryKey(String tableName, String columnName,
             String referencedTableName) {
 
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName)) {
-                boolean existingForeignKey = false;
-                while (foreignKeys.next()) {
-                    String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-                    String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+            ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName);
 
-                    if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
-                        continue;
-                    }
+            boolean existingForeignKey = false;
+            while (foreignKeys.next()) {
+                String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
+                String pkTableName = foreignKeys.getString("PKTABLE_NAME");
 
-                    existingForeignKey = true;
-                    break;
+                if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
+                    continue;
                 }
 
-                Assertions.assertTrue(existingForeignKey,
-                        "There is no " + columnName + " column reference table " + referencedTableName
-                                + "'s primary key");
+                existingForeignKey = true;
+                break;
             }
+
+            Assertions.assertTrue(existingForeignKey,
+                    "There is no " + columnName + " column reference table " + referencedTableName
+                            + "'s primary key");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void verifyTableHaveRequiredDataTypeAndNameColumn(String tableName, String columnName, String dataType,
+    private void verifyTableHasRequiredDataTypeAndNameColumn(String tableName, String columnName, String dataType,
             Integer length) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
-                boolean found = false;
-                if (!columns.next()) {
-                    Assertions.fail("Table " + tableName + " should have column " + columnName);
-                }
+            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
 
-                String actualColumnDataType = columns.getString("TYPE_NAME");
-                int columnLength = columns.getInt("COLUMN_SIZE");
+            verifyColumnDataType(columns, columnName, dataType);
+            verifyColumnLength(columns, columnName, length);
 
-                if (!actualColumnDataType.equalsIgnoreCase(dataType)) {
-                    Assertions.fail("Column " + columnName + " should have datatype " + dataType
-                            + ". But actual datatype we got is " + actualColumnDataType);
-                }
-
-                if (columnLength != length) {
-                    Assertions.fail("Datatype " + dataType + " length should be " + length
-                            + ". But actual length we got is " + columnLength);
-                }
-
-                found = true;
-                Assertions.assertTrue(found);
-
-            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
-    public void verifyTableShouldHaveUniqueConstraintOnColumns(String tableName, String firstColumnName,
+    public void verifyTableShouldHasUniqueConstraintOnColumns(String tableName, String firstColumnName,
             String secondColumnName) {
         try (Connection connection = dataSource.getConnection()) {
             boolean constraintExists = false;
@@ -319,146 +368,46 @@ public class DatabaseDefinitionSteps {
         return false;
     }
 
-    private void verifyTableHaveDataTypeAndNameColumn(String tableName, String columnName, String dataType) {
+    private void verifyTableHasDataTypeAndNameColumn(String tableName, String columnName, String dataType) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            try (ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName)) {
-                boolean found = false;
-                if (!columns.next()) {
-                    Assertions.fail("Table " + tableName + "should have column " + columnName);
-                }
+            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
+            verifyColumnDataType(columns, columnName, dataType);
 
-                String actualColumnDataType = columns.getString("TYPE_NAME");
-
-                // Normalize the data type names
-                switch (actualColumnDataType) {
-                    case "int4":
-                        actualColumnDataType = "int";
-                        break;
-                    case "int8":
-                        actualColumnDataType = "bigint";
-                        break;
-                    case "int2":
-                        actualColumnDataType = "smallint";
-                        break;
-                    case "bool":
-                        actualColumnDataType = "boolean";
-                        break;
-                    default:
-                        break;
-                }
-
-                if (!actualColumnDataType.equalsIgnoreCase(dataType)) {
-                    Assertions.fail("Column " + columnName + " should have datatype " + dataType
-                            + ".But datatype we got is " + actualColumnDataType);
-                }
-
-                found = true;
-                Assertions.assertTrue(found);
-            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
-    private void verifyAllCreatedTableHavePrimaryKey(ArrayList<String> createdTables, String columnName,
-            String dataType) {
-
+    private void verifyTableHasPrimaryKey(String tableName, String columnName, String dataType) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
-            boolean allPKFound = false;
 
-            for (String currentTable : createdTables) {
+            ResultSet primaryKeys = verifiedPrimaryKeys(metaData, tableName);
+            verifyColumnName(primaryKeys, columnName);
 
-                try (ResultSet primaryKeys = metaData.getPrimaryKeys(con.getCatalog(), currentSchema, currentTable)) {
-                    if (!primaryKeys.next()) {
-                        Assertions.fail("Table " + currentTable + " should have primary key");
-                    }
-
-                    String pkColumnName = primaryKeys.getString("COLUMN_NAME");
-
-                    if (!pkColumnName.equalsIgnoreCase(columnName)) {
-                        Assertions.fail("Primary Key should have column" + columnName
-                                + ". But the column we got is " + pkColumnName);
-                    }
-
-                    try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
-                            pkColumnName)) {
-                        if (!columns.next()) {
-                            Assertions.fail("Table " + currentTable
-                                    + " should have primary key column " + pkColumnName);
-                        }
-
-                        String actualDataType = columns.getString("TYPE_NAME");
-
-                        // Because in Postgres BigInt type is named as 'int8'
-                        if ("int8".equals(actualDataType)) {
-                            actualDataType = "bigint";
-                        }
-
-                        if (!actualDataType.equalsIgnoreCase(dataType)) {
-                            Assertions.fail("Primary Key should have datatype" + dataType
-                                    + ". But the datatype we got is " + actualDataType);
-                        }
-
-                    }
-                }
-            }
-            allPKFound = true;
-            Assertions.assertTrue(allPKFound);
+            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
+            verifyColumnDataType(columns, columnName, dataType);
 
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RuntimeException("SQL error: " + e.getMessage(), e);
+        }
+    }
+
+    private void verifyAllCreatedTableHavePrimaryKey(ArrayList<String> createdTables, String columnName,
+            String dataType) {
+        for (String currentTable : createdTables) {
+            verifyTableHasPrimaryKey(currentTable, columnName, dataType);
         }
 
     }
 
     private void verifyAllCreatedTableHaveRequiredDataTypeColumn(ArrayList<String> createdTables, String columnName,
             String dataType, Integer length) {
-
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
-            boolean allColumnFound = false;
-
-            for (String currentTable : createdTables) {
-
-                try (ResultSet columns = metaData.getColumns(con.getCatalog(), currentSchema, currentTable,
-                        columnName)) {
-
-                    if (!columns.next()) {
-                        Assertions.fail("Table " + currentTable + " should have column " + columnName);
-                    }
-
-                    String actualDataType = columns.getString("TYPE_NAME");
-
-                    int columnSize = columns.getInt("COLUMN_SIZE");
-
-                    if (!actualDataType.equalsIgnoreCase(dataType)) {
-                        Assertions.fail("Column " + columnName + " should have datatype " + dataType
-                                + ". But the datatype we got is " + actualDataType);
-                    }
-
-                    if (columnSize != length) {
-                        Assertions.fail("Datatype " + dataType + " length should be " + length
-                                + ". But the length we got is " + columnSize);
-                    }
-
-                }
-            }
-
-            allColumnFound = true;
-            Assertions.assertTrue(allColumnFound);
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("SQL error: " + e.getMessage(), e);
-        } finally {
-            if (dataSource != null) {
-                dataSource.close();
-            }
+        for (String currentTable : createdTables) {
+            verifyTableHasRequiredDataTypeAndNameColumn(currentTable, columnName, dataType, length);
         }
     }
-
 }
