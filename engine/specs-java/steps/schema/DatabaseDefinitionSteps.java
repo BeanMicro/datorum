@@ -243,14 +243,11 @@ public class DatabaseDefinitionSteps {
     private ResultSet verifiedPrimaryKeys(DatabaseMetaData metaData, String tableName) {
         try {
             ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
-            if (!primaryKeys.next()) {
-                Assertions.fail("Table " + tableName + " should have primary key.");
-            }
+            Assertions.assertTrue(primaryKeys.next(), "Table " + tableName + " should have primary key.");
 
             return primaryKeys;
         } catch (SQLException e) {
             e.printStackTrace();
-            Assertions.fail("An error occurred while retrieving primary key information.");
             return null;
         }
     }
@@ -258,15 +255,11 @@ public class DatabaseDefinitionSteps {
     private ResultSet verifiedColumns(DatabaseMetaData metaData, String tableName, String columnName) {
         try {
             ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName);
-
-            if (!columns.next()) {
-                Assertions.fail("Table " + tableName + " should have primary key column " + columnName);
-            }
-
+            Assertions.assertTrue(columns.next(),
+                    "Table " + tableName + " should have primary key column " + columnName);
             return columns;
         } catch (SQLException e) {
             e.printStackTrace();
-            Assertions.fail("An error occurred while retrieving primary key information.");
             return null;
         }
     }
@@ -335,19 +328,12 @@ public class DatabaseDefinitionSteps {
     public void verifyTableShouldHasUniqueConstraintOnColumns(String tableName, String firstColumnName,
             String secondColumnName) {
         try (Connection connection = dataSource.getConnection()) {
-            boolean constraintExists = false;
 
             boolean firstUniqueColumn = isColumnUnique(connection, currentSchema, tableName, firstColumnName);
             boolean secondUniqueColumn = isColumnUnique(connection, currentSchema, tableName, secondColumnName);
 
-            if (!firstUniqueColumn)
-                Assertions.fail("Column " + firstColumnName + " has not UNIQUE");
-
-            if (!secondUniqueColumn)
-                Assertions.fail("Column " + secondColumnName + " has not UNIQUE");
-
-            constraintExists = true;
-            Assertions.assertTrue(constraintExists);
+            Assertions.assertTrue(firstUniqueColumn, "There is no UNIQUE column " + firstColumnName);
+            Assertions.assertTrue(secondUniqueColumn, "There is no UNIQUE column " + secondColumnName);
 
         } catch (SQLException e) {
             e.printStackTrace();
