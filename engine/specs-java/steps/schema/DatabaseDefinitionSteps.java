@@ -193,12 +193,12 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyColumnDataType(ResultSet rs, String columnName, String expectedDataType) {
+    private void verifyColumnDataType(ResultSet retrievedColumn, String expectedDataType) {
         try {
-            String typeName = rs.getString("TYPE_NAME");
+            String typeName = retrievedColumn.getString("TYPE_NAME");
             String actualColumnDataType = TYPE_MAPPING.getOrDefault(typeName, typeName);
             Assertions.assertEquals(expectedDataType.toLowerCase(), actualColumnDataType,
-                    "Column " + columnName + " should have datatype " + expectedDataType
+                    "Column should have datatype " + expectedDataType
                             + ". But datatype we got is " + actualColumnDataType);
 
         } catch (SQLException e) {
@@ -206,9 +206,9 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyColumnName(ResultSet rs, String expectedColumnName) {
+    private void verifyPrimaryKeyColumnName(ResultSet retrievedPrimaryKey, String expectedColumnName) {
         try {
-            String actualColumnName = rs.getString("COLUMN_NAME");
+            String actualColumnName = retrievedPrimaryKey.getString("COLUMN_NAME");
             Assertions.assertEquals(expectedColumnName, actualColumnName,
                     "Primary key should have column " + expectedColumnName + ". But the column we got is "
                             + actualColumnName);
@@ -218,46 +218,47 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyColumnLength(ResultSet rs, String columnName, Integer expectedColumnLength) {
+    private void verifyColumnLength(ResultSet retrievedColumn, Integer expectedColumnLength) {
         try {
-            int actualColumnLength = rs.getInt("COLUMN_SIZE");
+            int actualColumnLength = retrievedColumn.getInt("COLUMN_SIZE");
+            
             Assertions.assertEquals(expectedColumnLength, actualColumnLength,
-                    "Column " + columnName + " should have datatype " + expectedColumnLength
-                            + ". But datatype we got is " + actualColumnLength);
+                    "Column should have datatype length" + expectedColumnLength
+                            + ". But datatype length we got is " + actualColumnLength);
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void verifyAutoIncrement(ResultSet rs, String columnName) {
+    private void verifyColumnAutoIncrement(ResultSet retrievedPrimaryKey) {
         try {
-            String actualAutoIncrement = rs.getString("IS_AUTOINCREMENT");
+            String actualAutoIncrement = retrievedPrimaryKey.getString("IS_AUTOINCREMENT");
 
             Assertions.assertEquals("YES", actualAutoIncrement,
-                    "Primary key " + columnName + " should have autoincrement");
+                    "Primary key should have autoincrement");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private ResultSet verifiedPrimaryKeys(DatabaseMetaData metaData, String tableName) {
+    private ResultSet retrievePrimaryKeyDescriptions(DatabaseMetaData metaData, String tableName) {
         try {
-            ResultSet primaryKeys = metaData.getPrimaryKeys(null, currentSchema, tableName);
-            Assertions.assertTrue(primaryKeys.next(), "Table " + tableName + " should have primary key.");
+            ResultSet retrievedPrimaryKey = metaData.getPrimaryKeys(null, currentSchema, tableName);
+            Assertions.assertTrue(retrievedPrimaryKey.next(), "Table " + tableName + " should have primary key.");
 
-            return primaryKeys;
+            return retrievedPrimaryKey;
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    private ResultSet verifiedColumns(DatabaseMetaData metaData, String tableName, String columnName) {
+    private ResultSet retrieveColumnDescriptions(DatabaseMetaData metaData, String tableName, String columnName) {
         try {
-            ResultSet columns = metaData.getColumns(null, currentSchema, tableName, columnName);
-            Assertions.assertTrue(columns.next(),
+            ResultSet retrievedColumn = metaData.getColumns(null, currentSchema, tableName, columnName);
+            Assertions.assertTrue(retrievedColumn.next(),
                     "Table " + tableName + " should have primary key column " + columnName);
-            return columns;
+            return retrievedColumn;
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
@@ -268,13 +269,13 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet primaryKeys = verifiedPrimaryKeys(metaData, tableName);
+            ResultSet retrievedPrimaryKey = retrievePrimaryKeyDescriptions(metaData, tableName);
 
-            String columnName = primaryKeys.getString("COLUMN_NAME");
+            String columnName = retrievedPrimaryKey.getString("COLUMN_NAME");
 
-            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
+            ResultSet retrievedColumn = retrieveColumnDescriptions(metaData, tableName, columnName);
 
-            verifyAutoIncrement(columns, columnName);
+            verifyColumnAutoIncrement(retrievedColumn);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -287,12 +288,12 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet foreignKeys = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName);
+            ResultSet retrievedForeignKeys = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName);
 
             boolean existingForeignKey = false;
-            while (foreignKeys.next()) {
-                String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-                String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+            while (retrievedForeignKeys.next()) {
+                String fkColumnName = retrievedForeignKeys.getString("FKCOLUMN_NAME");
+                String pkTableName = retrievedForeignKeys.getString("PKTABLE_NAME");
 
                 if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
                     continue;
@@ -315,10 +316,10 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
+            ResultSet retrievedColumn = retrieveColumnDescriptions(metaData, tableName, columnName);
 
-            verifyColumnDataType(columns, columnName, dataType);
-            verifyColumnLength(columns, columnName, length);
+            verifyColumnDataType(retrievedColumn, dataType);
+            verifyColumnLength(retrievedColumn, length);
 
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -343,9 +344,9 @@ public class DatabaseDefinitionSteps {
     public boolean isColumnUnique(Connection conn, String schemaName, String tableName, String columnName)
             throws SQLException {
         DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet rs = metaData.getIndexInfo(null, schemaName, tableName, true, false)) {
-            while (rs.next()) {
-                String indexColumnName = rs.getString("COLUMN_NAME");
+        try (ResultSet retrievedUniqueColumn = metaData.getIndexInfo(null, schemaName, tableName, true, false)) {
+            while (retrievedUniqueColumn.next()) {
+                String indexColumnName = retrievedUniqueColumn.getString("COLUMN_NAME");
                 if (columnName.equals(indexColumnName)) {
                     return true;
                 }
@@ -358,8 +359,8 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
-            verifyColumnDataType(columns, columnName, dataType);
+            ResultSet retrievedColumn = retrieveColumnDescriptions(metaData, tableName, columnName);
+            verifyColumnDataType(retrievedColumn, dataType);
 
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -370,15 +371,14 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet primaryKeys = verifiedPrimaryKeys(metaData, tableName);
-            verifyColumnName(primaryKeys, columnName);
+            ResultSet retrievedPrimaryKey = retrievePrimaryKeyDescriptions(metaData, tableName);
+            verifyPrimaryKeyColumnName(retrievedPrimaryKey, columnName);
 
-            ResultSet columns = verifiedColumns(metaData, tableName, columnName);
-            verifyColumnDataType(columns, columnName, dataType);
+            ResultSet retievedColumn = retrieveColumnDescriptions(metaData, tableName, columnName);
+            verifyColumnDataType(retievedColumn, dataType);
 
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new RuntimeException("SQL error: " + e.getMessage(), e);
         }
     }
 
