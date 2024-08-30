@@ -79,21 +79,21 @@ public class DatabaseDefinitionSteps {
     }
 
     @And("table {tableName} SHOULD have required {dataType}\\({int}\\) {columnName} column")
-    public void tableShouldHaveRequiredDataTypeColumn(String tableName, String dataType,
+    public void tableShouldHaveRequiredDataTypeAndLengthColumn(String tableName, String dataType,
             Integer length, String columnName) {
 
-        verifyTableHasRequiredDataTypeAndNameColumn(tableName, columnName, dataType, length);
+        verifyTableHasColumnWithDatatypeAndLength(tableName, columnName, dataType, length);
 
     }
 
     @And("table {tableName} SHOULD have {dataType} {columnName} column")
     public void tableShouldHaveDataTypeColumn(String tableName, String dataType, String columnName) {
 
-        verifyTableHasDataTypeAndNameColumn(tableName, columnName, dataType);
+        verifyTableHasColumnWithDatatype(tableName, columnName, dataType);
     }
 
     @And("all the created tables SHOULD have primary key {dataType} {columnName} column")
-    public void allTheCreatedTablesShouldHavePrimaryKeyBigintIdColumn(String dataType, String columnName) {
+    public void allTheCreatedTablesShouldHavePrimaryKeyBigIntColumn(String dataType, String columnName) {
 
         verifyAllCreatedTableHavePrimaryKey(createdTableList, columnName, dataType);
     }
@@ -105,7 +105,7 @@ public class DatabaseDefinitionSteps {
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
-    public void allTheCreatedTablesShouldHaveRequiredVarcharNameColumn(String dataType, Integer length,
+    public void allTheCreatedTablesShouldHaveRequiredVarcharColumn(String dataType, Integer length,
             String columnName) {
         verifyAllCreatedTableHaveRequiredDataTypeColumn(createdTableList, columnName, dataType, length);
     }
@@ -221,7 +221,7 @@ public class DatabaseDefinitionSteps {
     private void verifyColumnLength(ResultSet retrievedColumn, Integer expectedColumnLength) {
         try {
             int actualColumnLength = retrievedColumn.getInt("COLUMN_SIZE");
-            
+
             Assertions.assertEquals(expectedColumnLength, actualColumnLength,
                     "Column should have datatype length" + expectedColumnLength
                             + ". But datatype length we got is " + actualColumnLength);
@@ -311,7 +311,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableHasRequiredDataTypeAndNameColumn(String tableName, String columnName, String dataType,
+    private void verifyTableHasColumnWithDatatypeAndLength(String tableName, String columnName, String dataType,
             Integer length) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
@@ -355,7 +355,7 @@ public class DatabaseDefinitionSteps {
         return false;
     }
 
-    private void verifyTableHasDataTypeAndNameColumn(String tableName, String columnName, String dataType) {
+    private void verifyTableHasColumnWithDatatype(String tableName, String columnName, String dataType) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
@@ -393,7 +393,7 @@ public class DatabaseDefinitionSteps {
     private void verifyAllCreatedTableHaveRequiredDataTypeColumn(ArrayList<String> createdTables, String columnName,
             String dataType, Integer length) {
         for (String currentTable : createdTables) {
-            verifyTableHasRequiredDataTypeAndNameColumn(currentTable, columnName, dataType, length);
+            verifyTableHasColumnWithDatatypeAndLength(currentTable, columnName, dataType, length);
         }
     }
 }
