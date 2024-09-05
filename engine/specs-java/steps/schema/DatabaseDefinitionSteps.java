@@ -68,7 +68,7 @@ public class DatabaseDefinitionSteps {
 
     @And("table {tableName} SHOULD have autoincrement primary key")
     public void tableShouldHaveAutoIncrementPrimaryKey(String tableName) {
-        verifyTableShouldHasAutoIncrementPrimaryKey(tableName);
+        verifyTableHasAutoIncrementPrimaryKey(tableName);
     }
 
     @And("table {tableName} SHOULD have {columnName} column reference table {referencedTableName}'s primary key")
@@ -101,7 +101,7 @@ public class DatabaseDefinitionSteps {
     @And("table {tableName} SHOULD have UNIQUE constraint on 2 columns {columnName} and {columnName}")
     public void tableShouldHaveUniqueConstraintColumns(String tableName, String firstColumnName,
             String secondColumnName) {
-        verifyTableShouldHasUniqueConstraintOnColumns(tableName, firstColumnName, secondColumnName);
+        verifyTableHasUniqueConstraintOnColumns(tableName, firstColumnName, secondColumnName);
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
@@ -266,7 +266,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableShouldHasAutoIncrementPrimaryKey(String tableName) {
+    private void verifyTableHasAutoIncrementPrimaryKey(String tableName) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
@@ -289,12 +289,12 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet foreignKeyResulSet = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName);
+            ResultSet foreignKeyResultSet = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName);
 
             boolean existingForeignKey = false;
-            while (foreignKeyResulSet.next()) {
-                String fkColumnName = foreignKeyResulSet.getString("FKCOLUMN_NAME");
-                String pkTableName = foreignKeyResulSet.getString("PKTABLE_NAME");
+            while (foreignKeyResultSet.next()) {
+                String fkColumnName = foreignKeyResultSet.getString("FKCOLUMN_NAME");
+                String pkTableName = foreignKeyResultSet.getString("PKTABLE_NAME");
 
                 if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
                     continue;
@@ -327,7 +327,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    public void verifyTableShouldHasUniqueConstraintOnColumns(String tableName, String firstColumnName,
+    public void verifyTableHasUniqueConstraintOnColumns(String tableName, String firstColumnName,
             String secondColumnName) {
         try (Connection connection = dataSource.getConnection()) {
 
