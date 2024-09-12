@@ -40,7 +40,7 @@ public class DatabaseDefinitionSteps {
         dataSource = dataSource();
 
         String schemaName = "datorum_schema";
-        dropSchemaIfExists(schemaName);
+        dropSchemaIfItExists(schemaName);
     }
 
     @And("an implementation of SchemaRepository")
@@ -60,7 +60,7 @@ public class DatabaseDefinitionSteps {
 
     @And("table {tableName} SHOULD be created in schema {schemaName}")
     public void tableShouldBeCreatedInSchemaDatorumSchema(String tableName, String schemaName) {
-        verifyTableInSchema(tableName, schemaName);
+        verifyTableExistsInSchema(tableName, schemaName);
 
         createdTableList.add(tableName);
         currentSchema = schemaName;
@@ -101,7 +101,7 @@ public class DatabaseDefinitionSteps {
     @And("table {tableName} SHOULD have UNIQUE constraint on 2 columns {columnName} and {columnName}")
     public void tableShouldHaveUniqueConstraintColumns(String tableName, String firstColumnName,
             String secondColumnName) {
-        verifyTableHasUniqueConstraintOnColumns(tableName, firstColumnName, secondColumnName);
+        verifyTableHasUniqueColumns(tableName, firstColumnName, secondColumnName);
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
@@ -167,7 +167,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void dropSchemaIfExists(String schemaName) {
+    private void dropSchemaIfItExists(String schemaName) {
         String dropSchemaQuery = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
 
         try (Connection con = dataSource.getConnection();
@@ -178,7 +178,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableInSchema(String tableName, String schemaName) {
+    private void verifyTableExistsInSchema(String tableName, String schemaName) {
         String verifyTableQuery = "SELECT table_name FROM information_schema.tables " +
                 "WHERE table_schema = '" + schemaName + "' " +
                 "AND table_name = '" + tableName + "'";
@@ -230,7 +230,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyColumnAutoIncrement(ResultSet primaryKeyResultSet) {
+    private void verifyColumnIsAutoIncrement(ResultSet primaryKeyResultSet) {
         try {
             String actualAutoIncrement = primaryKeyResultSet.getString("IS_AUTOINCREMENT");
 
@@ -276,7 +276,7 @@ public class DatabaseDefinitionSteps {
 
             ResultSet columnResultSet = retrieveColumnDescriptions(metaData, tableName, columnName);
 
-            verifyColumnAutoIncrement(columnResultSet);
+            verifyColumnIsAutoIncrement(columnResultSet);
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -327,7 +327,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    public void verifyTableHasUniqueConstraintOnColumns(String tableName, String firstColumnName,
+    public void verifyTableHasUniqueColumns(String tableName, String firstColumnName,
             String secondColumnName) {
         try (Connection connection = dataSource.getConnection()) {
 
