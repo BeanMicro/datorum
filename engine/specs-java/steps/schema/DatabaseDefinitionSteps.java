@@ -93,9 +93,9 @@ public class DatabaseDefinitionSteps {
     }
 
     @And("all the created tables SHOULD have primary key {dataType} {columnName} column")
-    public void allTheCreatedTablesShouldHavePrimaryKeyBigIntColumn(String dataType, String columnName) {
+    public void allTheCreatedTablesShouldHavePrimaryKeyDataTypeColumn(String dataType, String columnName) {
 
-        verifyAllCreatedTablesHavePrimaryKey(createdTableList, columnName, dataType);
+        verifyAllCreatedTablesHavePrimaryKeyWithDataType(createdTableList, columnName, dataType);
     }
 
     @And("table {tableName} SHOULD have UNIQUE constraint on 2 columns {columnName} and {columnName}")
@@ -105,9 +105,9 @@ public class DatabaseDefinitionSteps {
     }
 
     @And("all the created tables SHOULD have required {dataType}\\({int}\\) {columnName} column")
-    public void allTheCreatedTablesShouldHaveRequiredVarcharColumn(String dataType, Integer length,
+    public void allTheCreatedTablesShouldHaveRequiredDataTypeAndLengthColumn(String dataType, Integer length,
             String columnName) {
-        verifyAllCreatedTablesHaveRequiredDataTypeColumn(createdTableList, columnName, dataType, length);
+        verifyAllCreatedTablesHaveRequiredDataTypeAndLengthColumn(createdTableList, columnName, dataType, length);
     }
 
     @ParameterType("[a-zA-Z_][a-zA-Z0-9_]*")
@@ -206,7 +206,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyPrimaryKeyColumnName(ResultSet primaryKeyResultSet, String expectedColumnName) {
+    private void verifyPrimaryKeyColumn(ResultSet primaryKeyResultSet, String expectedColumnName) {
         try {
             String actualColumnName = primaryKeyResultSet.getString("COLUMN_NAME");
             Assertions.assertEquals(expectedColumnName, actualColumnName,
@@ -368,12 +368,12 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableHasPrimaryKey(String tableName, String columnName, String dataType) {
+    private void verifyTableHasPrimaryKeyColumnWithDataType(String tableName, String columnName, String dataType) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
             ResultSet primaryKeyResultSet = retrievePrimaryKeyDescriptions(metaData, tableName);
-            verifyPrimaryKeyColumnName(primaryKeyResultSet, columnName);
+            verifyPrimaryKeyColumn(primaryKeyResultSet, columnName);
 
             ResultSet columnResultSet = retrieveColumnDescriptions(metaData, tableName, columnName);
             verifyColumnDataType(columnResultSet, dataType);
@@ -383,16 +383,16 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyAllCreatedTablesHavePrimaryKey(ArrayList<String> createdTables, String columnName,
+    private void verifyAllCreatedTablesHavePrimaryKeyWithDataType(ArrayList<String> createdTables, String columnName,
             String dataType) {
         for (String currentTable : createdTables) {
-            verifyTableHasPrimaryKey(currentTable, columnName, dataType);
+            verifyTableHasPrimaryKeyColumnWithDataType(currentTable, columnName, dataType);
         }
 
     }
 
-    private void verifyAllCreatedTablesHaveRequiredDataTypeColumn(ArrayList<String> createdTables, String columnName,
-            String dataType, Integer length) {
+    private void verifyAllCreatedTablesHaveRequiredDataTypeAndLengthColumn(ArrayList<String> createdTables,
+            String columnName, String dataType, Integer length) {
         for (String currentTable : createdTables) {
             verifyTableHasColumnWithDatatypeAndLength(currentTable, columnName, dataType, length);
         }
