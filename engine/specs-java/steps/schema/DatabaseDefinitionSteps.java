@@ -1,31 +1,28 @@
 package steps.schema;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import java.util.ArrayList;
-import java.util.Map;
-
-import org.junit.jupiter.api.Assertions;
-
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-
 import io.beandev.datorum.CreatePostgres;
 import io.beandev.datorum.schema.jdbc.JdbcSchemaRepository;
 import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
-import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import org.junit.jupiter.api.Assertions;
+
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Map;
 
 public class DatabaseDefinitionSteps {
     private JdbcSchemaRepository jdbcSchemaRepository;
     private HikariDataSource dataSource;
-    private ArrayList<String> createdTableList = new ArrayList<>();
+    private final ArrayList<String> createdTableList = new ArrayList<>();
     private String currentSchema;
     private static final Map<String, String> TYPE_MAPPING = Map.of(
             "int4", "int",
@@ -36,11 +33,11 @@ public class DatabaseDefinitionSteps {
     @Given("^a Postgres database without schemas$")
     public void aPostgresDatabaseWithoutSchemas() throws Exception {
 
-        CreatePostgres.getInstance();
+        CreatePostgres.getInstance().initDatabase();
         dataSource = dataSource();
 
         String schemaName = "datorum_schema";
-        dropSchemaIfItExists(schemaName);
+        dropSchemaIfAlreadyExists(schemaName);
     }
 
     @And("an implementation of SchemaRepository")
@@ -48,14 +45,14 @@ public class DatabaseDefinitionSteps {
         jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
     }
 
-    @When("createBaseTables\\() is executed")
+    @When("createBaseTables method is executed")
     public void createbasetablesIsExecuted() {
         jdbcSchemaRepository.createBaseTables();
     }
 
     @Then("schema {schemaName} SHOULD be created")
     public void schemaShouldBeCreated(String schemaName) {
-        checkSchemaExist(schemaName);
+        checkSchemaExists(schemaName);
     }
 
     @And("table {tableName} SHOULD be created in schema {schemaName}")
@@ -152,7 +149,7 @@ public class DatabaseDefinitionSteps {
         return cp;
     }
 
-    private void checkSchemaExist(String schemaName) {
+    private void checkSchemaExists(String schemaName) {
         String checkSchemaQuery = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '"
                 + schemaName + "'";
 
@@ -167,7 +164,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void dropSchemaIfItExists(String schemaName) {
+    private void dropSchemaIfAlreadyExists(String schemaName) {
         String dropSchemaQuery = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
 
         try (Connection con = dataSource.getConnection();

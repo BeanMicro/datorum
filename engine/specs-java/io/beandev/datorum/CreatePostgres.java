@@ -1,12 +1,5 @@
 package io.beandev.datorum;
 
-import java.util.Map;
-import java.util.List;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
-import java.lang.Exception;
-
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
@@ -23,16 +16,22 @@ import io.kubernetes.client.openapi.models.V1ServicePort;
 import io.kubernetes.client.openapi.models.V1ServiceSpec;
 import io.kubernetes.client.util.Config;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+
 public class CreatePostgres {
 
     private static CreatePostgres instance;
-    private CoreV1Api api;
+    private final CoreV1Api api;
 
     public CreatePostgres() throws Exception {
         ApiClient client = Config.defaultClient();
         Configuration.setDefaultApiClient(client);
         this.api = new CoreV1Api();
-        initDatabase();
     }
 
     public static CreatePostgres getInstance() throws Exception {
@@ -42,9 +41,9 @@ public class CreatePostgres {
         return instance;
     }
 
-    private void initDatabase() throws Exception {
+    public void initDatabase() throws Exception {
 
-        ensurePostgresServiceExists(api, "default", "postgres-service");
+        ensurePostgresServiceExists(api);
 
         waitForPostgresServiceReady(api, "default", "postgres-service");
 
@@ -95,7 +94,7 @@ public class CreatePostgres {
         long serviceTimeoutSeconds = 30;
         long startTime = System.currentTimeMillis();
         while (true) {
-            V1Service service = api.readNamespacedService(serviceName, namespace, null);
+            V1Service service = api.readNamespacedService(serviceName, namespace).execute();
             if (service.getStatus() != null && service.getStatus().getLoadBalancer() != null) {
                 System.out.println("PostgreSQL Service is ready.");
                 break;
@@ -115,7 +114,7 @@ public class CreatePostgres {
         long podTimeoutSeconds = 60;
         long startTime = System.currentTimeMillis();
         while (true) {
-            V1Pod pod = api.readNamespacedPod(podName, namespace, null);
+            V1Pod pod = api.readNamespacedPod(podName, namespace).execute();
             if (pod.getStatus() != null && pod.getStatus().getPhase().equals("Running")) {
                 System.out.println("PostgreSQL Pod is ready.");
                 break;
@@ -133,12 +132,12 @@ public class CreatePostgres {
 
     private static void ensurePostgresPodExists(CoreV1Api api, String namespace, String podName) throws Exception {
         try {
-            V1Pod existingPod = api.readNamespacedPod(podName, namespace, null);
+            V1Pod existingPod = api.readNamespacedPod(podName, namespace).execute();
             System.out.println("PostgreSQL Pod already exists: " + existingPod.getMetadata().getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 V1Pod postgresPodDef = createPostgresPodDefinition();
-                V1Pod createdPod = api.createNamespacedPod(namespace, postgresPodDef, null, null, null, null);
+                V1Pod createdPod = api.createNamespacedPod(namespace, postgresPodDef).execute();
                 System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
             } else {
                 throw e;
@@ -146,17 +145,17 @@ public class CreatePostgres {
         }
     }
 
-    private static void ensurePostgresServiceExists(CoreV1Api api, String namespace, String serviceName)
+    private static void ensurePostgresServiceExists(CoreV1Api api)
             throws Exception {
         try {
-            V1Service existingService = api.readNamespacedService(serviceName, namespace, null);
-            System.out.println("PostgreSQL Service already exists: " + existingService.getMetadata().getName());
+            V1Service existingService = api.readNamespacedService("postgres-service", "default").execute();
+            System.out.println("PostgreSQL Service already exists: " + Objects.requireNonNull(existingService.getMetadata()).getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 V1Service postgresServiceDef = createPostgresServiceDefinition();
-                V1Service createdService = api.createNamespacedService(namespace, postgresServiceDef, null, null, null,
-                        null);
-                System.out.println("PostgreSQL Service created: " + createdService.getMetadata().getName());
+                V1Service createdService = api.createNamespacedService("default", postgresServiceDef
+                ).execute();
+                System.out.println("PostgreSQL Service created: " + Objects.requireNonNull(createdService.getMetadata()).getName());
             } else {
                 throw e;
             }
