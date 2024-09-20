@@ -1,1 +1,37 @@
+name: CI
+
+on:
+  [push,pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v3
+
+    - name: Install and config kind Kubernetes
+      uses: container-tools/kind-action@v2.0.4
+      with:
+        config: app/k8s/local/kind.yaml
+        cluster_name: connectdb
+
+    
+    - name: Set kubectl context
+      run: |
+          kubectl config use-context kind-connectdb
+
+    - name: Build and Test
+      run: ./gradlew build
+
 
