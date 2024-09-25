@@ -23,7 +23,6 @@ public class DatabaseDefinitionSteps {
     private JdbcSchemaRepository jdbcSchemaRepository;
     private HikariDataSource dataSource;
     private final ArrayList<String> createdTableList = new ArrayList<>();
-    private String currentSchema;
     private static final Map<String, String> TYPE_MAPPING = Map.of(
             "int4", "int",
             "int8", "bigint",
@@ -60,7 +59,6 @@ public class DatabaseDefinitionSteps {
         verifyTableExistsInSchema(tableName, schemaName);
 
         createdTableList.add(tableName);
-        currentSchema = schemaName;
     }
 
     @And("table {tableName} SHOULD have autoincrement primary key")
@@ -75,11 +73,18 @@ public class DatabaseDefinitionSteps {
         verifyTableHasColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
     }
 
+    @And("table {tableName} SHOULD have required {columnName} column reference table {referencedTableName}'s primary key")
+    public void tableShouldHaveRequiredColumnReferenceTablePrimaryKey(String tableName, String columnName,
+            String referencedTableName) {
+
+        verifyTableHasRequiredColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
+    }
+
     @And("table {tableName} SHOULD have required {dataType}\\({int}\\) {columnName} column")
     public void tableShouldHaveRequiredDataTypeAndLengthColumn(String tableName, String dataType,
             Integer length, String columnName) {
 
-        verifyTableHasColumnWithDatatypeAndLength(tableName, columnName, dataType, length);
+        verifyTableHasRequiredColumnWithDatatypeAndLength(tableName, columnName, dataType, length);
 
     }
 
@@ -238,9 +243,19 @@ public class DatabaseDefinitionSteps {
         }
     }
 
+    private void verifyRequiredColumn(ResultSet columnResultSet) {
+        try {
+            String actualRequiredColumn = columnResultSet.getString("IS_NULLABLE");
+            Assertions.assertEquals("NO", actualRequiredColumn,
+                    "Column should be not nullable");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     private ResultSet retrievePrimaryKeyDescriptions(DatabaseMetaData metaData, String tableName) {
         try {
-            ResultSet primaryKeyResultSet = metaData.getPrimaryKeys(null, currentSchema, tableName);
+            ResultSet primaryKeyResultSet = metaData.getPrimaryKeys(null, null, tableName);
             Assertions.assertTrue(primaryKeyResultSet.next(),
                     "Table " + tableName + " should have primary key.");
 
@@ -253,7 +268,7 @@ public class DatabaseDefinitionSteps {
 
     private ResultSet retrieveColumnDescriptions(DatabaseMetaData metaData, String tableName, String columnName) {
         try {
-            ResultSet columnResultSet = metaData.getColumns(null, currentSchema, tableName, columnName);
+            ResultSet columnResultSet = metaData.getColumns(null, null, tableName, columnName);
             Assertions.assertTrue(columnResultSet.next(),
                     "Table " + tableName + " should have primary key column " + columnName);
             return columnResultSet;
@@ -286,7 +301,7 @@ public class DatabaseDefinitionSteps {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
 
-            ResultSet foreignKeyResultSet = metaData.getImportedKeys(con.getCatalog(), currentSchema, tableName);
+            ResultSet foreignKeyResultSet = metaData.getImportedKeys(con.getCatalog(), null, tableName);
 
             boolean existingForeignKey = false;
             while (foreignKeyResultSet.next()) {
@@ -309,7 +324,39 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void verifyTableHasColumnWithDatatypeAndLength(String tableName, String columnName, String dataType,
+    private void verifyTableHasRequiredColumnReferenceToTablePrimaryKey(String tableName, String columnName,
+            String referencedTableName) {
+
+        try (Connection con = dataSource.getConnection()) {
+            DatabaseMetaData metaData = con.getMetaData();
+
+            ResultSet columnResultSet = retrieveColumnDescriptions(metaData, tableName, columnName);
+            verifyRequiredColumn(columnResultSet);
+
+            ResultSet foreignKeyResultSet = metaData.getImportedKeys(con.getCatalog(), null, tableName);
+
+            boolean existingForeignKey = false;
+            while (foreignKeyResultSet.next()) {
+                String fkColumnName = foreignKeyResultSet.getString("FKCOLUMN_NAME");
+                String pkTableName = foreignKeyResultSet.getString("PKTABLE_NAME");
+
+                if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
+                    continue;
+                }
+
+                existingForeignKey = true;
+                break;
+            }
+
+            Assertions.assertTrue(existingForeignKey,
+                    "There is no " + columnName + " column reference table " + referencedTableName
+                            + "'s primary key");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void verifyTableHasRequiredColumnWithDatatypeAndLength(String tableName, String columnName, String dataType,
             Integer length) {
         try (Connection con = dataSource.getConnection()) {
             DatabaseMetaData metaData = con.getMetaData();
@@ -318,6 +365,7 @@ public class DatabaseDefinitionSteps {
 
             verifyColumnDataType(columnResultSet, dataType);
             verifyColumnLength(columnResultSet, length);
+            verifyRequiredColumn(columnResultSet);
 
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -328,8 +376,8 @@ public class DatabaseDefinitionSteps {
             String secondColumnName) {
         try (Connection connection = dataSource.getConnection()) {
 
-            boolean firstUniqueColumn = isColumnUnique(connection, currentSchema, tableName, firstColumnName);
-            boolean secondUniqueColumn = isColumnUnique(connection, currentSchema, tableName, secondColumnName);
+            boolean firstUniqueColumn = isColumnUnique(connection, tableName, firstColumnName);
+            boolean secondUniqueColumn = isColumnUnique(connection, tableName, secondColumnName);
 
             Assertions.assertTrue(firstUniqueColumn, "There is no UNIQUE column " + firstColumnName);
             Assertions.assertTrue(secondUniqueColumn, "There is no UNIQUE column " + secondColumnName);
@@ -339,10 +387,10 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    public boolean isColumnUnique(Connection conn, String schemaName, String tableName, String columnName)
+    public boolean isColumnUnique(Connection conn, String tableName, String columnName)
             throws SQLException {
         DatabaseMetaData metaData = conn.getMetaData();
-        try (ResultSet uniqueColumnResultSet = metaData.getIndexInfo(null, schemaName, tableName, true, false)) {
+        try (ResultSet uniqueColumnResultSet = metaData.getIndexInfo(null, null, tableName, true, false)) {
             while (uniqueColumnResultSet.next()) {
                 String indexColumnName = uniqueColumnResultSet.getString("COLUMN_NAME");
                 if (columnName.equals(indexColumnName)) {
@@ -391,7 +439,7 @@ public class DatabaseDefinitionSteps {
     private void verifyAllCreatedTablesHaveRequiredDataTypeAndLengthColumn(ArrayList<String> createdTables,
             String columnName, String dataType, Integer length) {
         for (String currentTable : createdTables) {
-            verifyTableHasColumnWithDatatypeAndLength(currentTable, columnName, dataType, length);
+            verifyTableHasRequiredColumnWithDatatypeAndLength(currentTable, columnName, dataType, length);
         }
     }
 }
