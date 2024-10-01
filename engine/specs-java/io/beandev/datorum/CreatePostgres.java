@@ -59,6 +59,7 @@ public class CreatePostgres {
                 .kind("Pod")
                 .metadata(new V1ObjectMeta().name("postgres").labels(Map.of("app", "postgres")))
                 .spec(new V1PodSpec()
+                        .overhead(null)
                         .containers(Collections.singletonList(new V1Container()
                                 .name("postgres")
                                 .image("postgres:latest")
@@ -149,13 +150,14 @@ public class CreatePostgres {
             throws Exception {
         try {
             V1Service existingService = api.readNamespacedService("postgres-service", "default").execute();
-            System.out.println("PostgreSQL Service already exists: " + Objects.requireNonNull(existingService.getMetadata()).getName());
+            System.out.println("PostgreSQL Service already exists: "
+                    + Objects.requireNonNull(existingService.getMetadata()).getName());
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 V1Service postgresServiceDef = createPostgresServiceDefinition();
-                V1Service createdService = api.createNamespacedService("default", postgresServiceDef
-                ).execute();
-                System.out.println("PostgreSQL Service created: " + Objects.requireNonNull(createdService.getMetadata()).getName());
+                V1Service createdService = api.createNamespacedService("default", postgresServiceDef).execute();
+                System.out.println("PostgreSQL Service created: "
+                        + Objects.requireNonNull(createdService.getMetadata()).getName());
             } else {
                 throw e;
             }

@@ -65,9 +65,9 @@ Feature: Schema DB
         And table attribute SHOULD have table_infix_id column reference table table_infix's primary key
 
         # datorum_migrations
-        And table migration SHOULD be created in schema datorum_schema
-        And table migration_command SHOULD be created in schema datorum_schema
-        And table migration_event SHOULD be created in schema datorum_schema
+        And table migration SHOULD be created in schema datorum_migrations
+        And table migration_command SHOULD be created in schema datorum_migrations
+        And table migration_event SHOULD be created in schema datorum_migrations
         And table migration_command SHOULD have required migration_id column reference table migration's primary key
         And table migration_command SHOULD have required VARCHAR(25) action column
         And table migration_event SHOULD have required migration_command_id column reference table migration_command's primary key
