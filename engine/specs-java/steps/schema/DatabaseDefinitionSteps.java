@@ -66,18 +66,11 @@ public class DatabaseDefinitionSteps {
         verifyTableHasAutoIncrementPrimaryKey(tableName);
     }
 
-    @And("table {tableName} SHOULD have {columnName} column reference table {referencedTableName}'s primary key")
+    @And("table {tableName} SHOULD have (required ){columnName} column reference table {referencedTableName}'s primary key")
     public void tableShouldHaveColumnReferenceTablePrimaryKey(String tableName, String columnName,
             String referencedTableName) {
 
         verifyTableHasColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
-    }
-
-    @And("table {tableName} SHOULD have required {columnName} column reference table {referencedTableName}'s primary key")
-    public void tableShouldHaveRequiredColumnReferenceTablePrimaryKey(String tableName, String columnName,
-            String referencedTableName) {
-
-        verifyTableHasRequiredColumnReferenceToTablePrimaryKey(tableName, columnName, referencedTableName);
     }
 
     @And("table {tableName} SHOULD have required {dataType}\\({int}\\) {columnName} column")
@@ -319,38 +312,8 @@ public class DatabaseDefinitionSteps {
             Assertions.assertTrue(existingForeignKey,
                     "There is no " + columnName + " column reference table " + referencedTableName
                             + "'s primary key");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void verifyTableHasRequiredColumnReferenceToTablePrimaryKey(String tableName, String columnName,
-            String referencedTableName) {
-
-        try (Connection con = dataSource.getConnection()) {
-            DatabaseMetaData metaData = con.getMetaData();
-
-            ResultSet columnResultSet = retrieveColumnDescriptions(metaData, tableName, columnName);
-            verifyRequiredColumn(columnResultSet);
-
-            ResultSet foreignKeyResultSet = metaData.getImportedKeys(con.getCatalog(), null, tableName);
-
-            boolean existingForeignKey = false;
-            while (foreignKeyResultSet.next()) {
-                String fkColumnName = foreignKeyResultSet.getString("FKCOLUMN_NAME");
-                String pkTableName = foreignKeyResultSet.getString("PKTABLE_NAME");
-
-                if (!fkColumnName.equals(columnName) || !pkTableName.equals(referencedTableName)) {
-                    continue;
-                }
-
-                existingForeignKey = true;
-                break;
-            }
-
-            Assertions.assertTrue(existingForeignKey,
-                    "There is no " + columnName + " column reference table " + referencedTableName
-                            + "'s primary key");
+            
+                            
         } catch (SQLException e) {
             e.printStackTrace();
         }
