@@ -1,0 +1,21 @@
+[package]
+name = "datorum-postgres"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rusqlite = { version = "0.35.0", features = ["column_decltype"] }
+pgwire = "0.29.1"
+tokio = { version = "1", features = ["full"] }
+bytes = "1.4.0"
+futures = "0.3"
+async-trait = "0.1"
+log = "0.4"
+env_logger = "0.10"
+rustls = "0.21.0"
+tokio-rustls = "0.24.0"
+rustls-pemfile = "1.0.0"
+webpki-roots = "0.25.0"
+
+[[test]]
+name = "example" # this should be the same as the filename of your test target
