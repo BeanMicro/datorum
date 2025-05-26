@@ -18,7 +18,7 @@ rustls-pemfile = "1.0.0"
 webpki-roots = "0.25.0"
 
 [dev-dependencies]
-cucumber = "0.20"
+cucumber = "0.21"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 
 [[test]]
