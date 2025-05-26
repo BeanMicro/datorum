@@ -1,0 +1,14 @@
+[package]
+name = "e2e"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "loadtest"
+path = "src/loadtest.rs"
+
+[[bin]]
+name = "e2etest"
+path = "src/e2etest.rs"
+
+[dependencies]

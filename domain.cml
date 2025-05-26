@@ -1,0 +1,132 @@
+/* Context Map written with 'ContextMapper DSL' */
+ContextMap DatorumContextMap {
+	type = SYSTEM_LANDSCAPE
+	state = TO_BE
+	/* Add bounded contexts to this context map: */
+	contains DatorumServer
+	contains DataDefinitionLanguage
+	contains DataManipulationLanguage
+	contains DataQueryLanguage
+	contains DataType
+	contains WriteAheadLog
+	contains PostgresWire
+	contains DatorumWire
+	contains Raft
+	contains DataMigration
+	contains SchemaEvolution
+	contains LoadBalancing
+	contains RelationalDatabaseBackend
+	contains MessageBroker
+	contains DomainBoundary
+
+	/* Define the context relationships: */
+	Raft [D]<-[U] WriteAheadLog : Raft_WAL {
+		
+	}
+
+	DataMigration [D]<-[U] WriteAheadLog : DataMigration_WAL {
+		exposedAggregates = XLogSequence
+	}
+
+	DataMigration [D]<-[U] WriteAheadLog : Migration_WAL {
+	}
+
+	DataMigration [U]->[D] SchemaEvolution : SchemaEvol_Migration {
+	}
+
+	SchemaEvolution [U]->[D] RelationalDatabaseBackend : SchemaEvol_RDBMS {
+	}
+
+	DatorumServer [D]<-[U] DataDefinitionLanguage {
+	}
+}
+
+/* Bounded Context Definitions */
+BoundedContext DatorumServer implements ApplicationServer {
+	type = APPLICATION
+	
+	Application DatorumServer {
+	}
+
+	Service PostgresWireServer {
+		
+	}
+}
+
+BoundedContext DataManipulationLanguage implements SQL
+
+BoundedContext DataDefinitionLanguage implements SQL
+
+BoundedContext DataQueryLanguage implements SQL
+
+BoundedContext DataType implements SQL
+
+BoundedContext WriteAheadLog implements ACID {
+	Aggregate XLogSequence
+}
+
+BoundedContext PostgresWire implements WireProtocol
+
+BoundedContext DatorumWire implements WireProtocol
+
+BoundedContext Raft implements CAP
+
+BoundedContext DataMigration implements CAP
+
+BoundedContext SchemaEvolution implements CAP
+
+BoundedContext LoadBalancing implements CAP
+
+BoundedContext RelationalDatabaseBackend implements DBMS
+
+BoundedContext MessageBroker implements Messaging
+
+BoundedContext DomainBoundary implements DDD
+
+/* Domain & Subdomain Definitions */
+Domain DatorumDomain {
+	Subdomain ApplicationServer {
+		type = CORE_DOMAIN
+	}
+
+	Subdomain WireProtocol {
+		type = CORE_DOMAIN
+		domainVisionStatement = "Frontend/Backend protocols."
+	}
+
+	Subdomain SQL {
+		type = CORE_DOMAIN
+	}
+
+	Subdomain DDD {
+		type = CORE_DOMAIN
+		domainVisionStatement = "Domain-driven design."		
+	}
+
+	Subdomain ACID {
+		type = CORE_DOMAIN
+	}
+
+	Subdomain CAP {
+		type = CORE_DOMAIN
+		domainVisionStatement = "High Availability - Strong Consistency - Data Sharding/Partitioning and all that jazz. This does not mean CAP theorem though."
+	}
+
+	Subdomain Performance {
+		type = SUPPORTING_DOMAIN
+	}
+
+	Subdomain DBMS {
+		type = SUPPORTING_DOMAIN
+	}
+
+	Subdomain Messaging {
+		type = GENERIC_SUBDOMAIN
+	}
+
+	Subdomain IAM {
+		type = GENERIC_SUBDOMAIN
+	}
+
+}
+
