@@ -1,0 +1,6 @@
+[submodule "QualityEngineering/goose"]
+	path = QualityEngineering/goose
+	url = git@github.com:BeanMicro/goose.git
+[submodule "QualityEngineering/cucumber-rs"]
+	path = QualityEngineering/cucumber-rs
+	url = git@github.com:BeanMicro/cucumber-rs.git

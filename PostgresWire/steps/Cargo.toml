@@ -1,0 +1,7 @@
+[package]
+name = "datorum-postgres-wire-steps"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cucumber = { path = "../../QualityEngineering/cucumber-rs" }
