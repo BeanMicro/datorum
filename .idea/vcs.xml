@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/QualityEngineering/cucumber-rs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/QualityEngineering/goose" vcs="Git" />
   </component>
 </project>

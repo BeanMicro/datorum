@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package datorum;
+
+// The Datorum service definition
+service DatorumService {
+    // Health check endpoint
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+    // Query execution endpoint
+    rpc ExecuteQuery(QueryRequest) returns (QueryResponse);
+
+    // Stream query results
+    rpc StreamQuery(QueryRequest) returns (stream QueryResult);
+}
+
+// Health check messages
+message HealthCheckRequest {
+    string service = 1;
+}
+
+message HealthCheckResponse {
+    enum ServingStatus {
+        UNKNOWN = 0;
+        SERVING = 1;
+        NOT_SERVING = 2;
+    }
+    ServingStatus status = 1;
+}
+
+// Query messages
+message QueryRequest {
+    string query = 1;
+    repeated string parameters = 2;
+}
+
+message QueryResponse {
+    bool success = 1;
+    string error_message = 2;
+    repeated QueryResult results = 3;
+}
+
+message QueryResult {
+    map<string, string> row = 1;
+}
