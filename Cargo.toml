@@ -10,3 +10,10 @@ members = [
     "QualityEngineering/cucumber-rs",
     "QualityEngineering/cucumber-rs/codegen",
 ]
+
+[workspace.package]
+rust-version = "1.87.0"  # Specify the minimum Rust version required
+
+[workspace.lints]
+rust = { nonstandard_style = "warn", unused = "warn" }
+clippy = { all = "warn" }

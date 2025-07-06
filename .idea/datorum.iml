@@ -19,6 +19,9 @@
       <sourceFolder url="file://$MODULE_DIR$/QualityEngineering/steps/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Server/main/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Server/tonic/tonic-build/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Server/tonic/tonic/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/Server/tonic/tonic/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
