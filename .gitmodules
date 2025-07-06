@@ -4,3 +4,6 @@
 [submodule "QualityEngineering/cucumber-rs"]
 	path = QualityEngineering/cucumber-rs
 	url = git@github.com:BeanMicro/cucumber-rs.git
+[submodule "Server/tonic"]
+	path = Server/tonic
+	url = git@github.com:BeanMicro/tonic.git
