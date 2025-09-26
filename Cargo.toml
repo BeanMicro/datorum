@@ -4,6 +4,7 @@ members = [
     "PostgresWire/main",
     "PostgresWire/steps",
     "Server/main",
+    "Server/stg",
     "QualityEngineering/main",
     "QualityEngineering/steps",
     "QualityEngineering/goose",
