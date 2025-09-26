@@ -22,6 +22,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Server/tonic/tonic-build/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Server/tonic/tonic/benches" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/Server/tonic/tonic/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Server/main/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
