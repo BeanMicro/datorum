@@ -1,9 +1,9 @@
 [submodule "QualityEngineering/goose"]
 	path = QualityEngineering/goose
-	url = git@github.com:BeanMicro/goose.git
+	url = https://github.com/BeanMicro/goose.git
 [submodule "QualityEngineering/cucumber-rs"]
 	path = QualityEngineering/cucumber-rs
-	url = git@github.com:BeanMicro/cucumber-rs.git
+	url = https://github.com/BeanMicro/cucumber-rs.git
 [submodule "Server/tonic"]
 	path = Server/tonic
-	url = git@github.com:BeanMicro/tonic.git
+	url = https://github.com/BeanMicro/tonic.git
