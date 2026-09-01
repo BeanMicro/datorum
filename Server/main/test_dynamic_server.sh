@@ -3,10 +3,10 @@
 echo "Testing Datorum Server with Dynamic Schema Support"
 echo "=================================================="
 
-# Start the server in the background
-cd /Users/mac/workspace/bean/micro/datorum/Server/main
+# Run from the repository root regardless of where this script is invoked from
+cd "$(dirname "$0")/../.."
 echo "Starting server..."
-cargo run --bin datorum-server &
+cargo run -p datorum-server --bin datorum-server &
 SERVER_PID=$!
 
 # Wait for server to start
@@ -17,7 +17,7 @@ echo "Testing client functionality..."
 echo "Running client (this should work exactly as before)..."
 
 # Run the client
-cargo run --bin client
+cargo run -p datorum-server --bin client
 
 # Clean up
 echo ""

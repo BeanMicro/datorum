@@ -20,11 +20,18 @@ git pull --recurse-submodules
 
 
 
-# Run all integration tests
-cargo test --test http3_e2e_tests
+# Run every test in the workspace
+cargo test --workspace
 
-# Run specific test
-cargo test --test http3_e2e_tests test_http3_server_e2e
+# Run the Gherkin suite in PostgresWire/features (make test)
+cargo test -p datorum-postgres-wire --test cucumber
 
-# Run with output
-cargo test --test http3_e2e_tests -- --nocapture
+# Run a single test by name, with output
+cargo test -p datorum-postgres-wire string_test -- --nocapture
+
+
+# Demos (see the Makefile)
+make demo-server    # datorum-server: startup banner, Avro schema demo, waits for Ctrl+C
+make demo-client    # client stub
+make demo-h3        # HTTP/3 server over QUIC on [::1]:4433
+make demo-pgwire    # PostgreSQL wire-protocol demo on 127.0.0.1:5433

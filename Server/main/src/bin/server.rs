@@ -39,7 +39,7 @@ pub struct Certs {
     #[structopt(
         long,
         short,
-        default_value = "Server/stg/src/bin/server.cert",
+        default_value = "Server/main/src/bin/server.cert",
         help = "Certificate for TLS. If present, `--key` is mandatory."
     )]
     pub cert: PathBuf,
@@ -47,7 +47,7 @@ pub struct Certs {
     #[structopt(
         long,
         short,
-        default_value = "Server/stg/src/bin/server.key",
+        default_value = "Server/main/src/bin/server.key",
         help = "Private key for the certificate."
     )]
     pub key: PathBuf,
