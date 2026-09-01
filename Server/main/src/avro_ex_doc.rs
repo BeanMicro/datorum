@@ -1,5 +1,5 @@
-use apache_avro::schema::RecordSchema;
 use apache_avro::Schema;
+use apache_avro::schema::RecordSchema;
 
 static RAW_SCHEMA_1: &str = r#"{
         "name": "A",

@@ -1,6 +1,6 @@
-use std::path::Path;
 use cucumber::World as _;
 use datorum_postgres_wire_steps::PostgresWireWorld;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() {

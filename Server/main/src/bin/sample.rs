@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures::{stream, StreamExt};
+use futures::{StreamExt, stream};
 use tokio::net::TcpListener;
 
 use pgwire::api::auth::noop::NoopStartupHandler;
@@ -18,7 +18,11 @@ impl NoopStartupHandler for DummyProcessor {}
 
 #[async_trait]
 impl SimpleQueryHandler for DummyProcessor {
-    async fn do_query<'a, C>(&self, _client: &mut C, query: &'a str) -> PgWireResult<Vec<Response<'a>>>
+    async fn do_query<'a, C>(
+        &self,
+        _client: &mut C,
+        query: &'a str,
+    ) -> PgWireResult<Vec<Response<'a>>>
     where
         C: ClientInfo + Unpin + Send + Sync,
     {
@@ -34,7 +38,7 @@ impl SimpleQueryHandler for DummyProcessor {
                 (Some(2), None),
             ];
             let schema_ref = schema.clone();
-            let data_row_stream = stream::iter(data.into_iter()).map(move |r| {
+            let data_row_stream = stream::iter(data).map(move |r| {
                 let mut encoder = DataRowEncoder::new(schema_ref.clone());
                 encoder.encode_field(&r.0)?;
                 encoder.encode_field(&r.1)?;
@@ -51,7 +55,6 @@ impl SimpleQueryHandler for DummyProcessor {
         }
     }
 }
-
 
 struct DummyProcessorFactory {
     handler: Arc<DummyProcessor>,
@@ -98,8 +101,6 @@ pub async fn main() {
     loop {
         let (tcp_stream, _) = listener.accept().await.unwrap();
         let factory_ref = factory.clone();
-        tokio::spawn(async move {
-            process_socket(tcp_stream, None, factory_ref).await
-        });
+        tokio::spawn(async move { process_socket(tcp_stream, None, factory_ref).await });
     }
 }

@@ -6,6 +6,7 @@ Feature: Postgres Backend Protocol
   Rule: Extended Query Protocol (Prepared Statements)
     Scenario: Parse, Bind, Execute and Sync flow
       Given client is authenticated
+      And a table "t" with an integer column "id"
       When client sends Parse(name: "", query: "INSERT INTO t (id) VALUES ($1)")
       And client sends Bind(name: "", statement: "", parameters: [1])
       And client sends Describe(type: "Statement", name: "")

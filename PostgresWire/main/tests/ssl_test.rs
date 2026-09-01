@@ -4,7 +4,7 @@ use std::thread;
 use std::time::Duration;
 
 fn is_port_available(addr: &str) -> bool {
-    TcpListener::bind(addr).map(|l| drop(l)).is_ok()
+    TcpListener::bind(addr).map(drop).is_ok()
 }
 
 fn wait_for_port_open(addr: &str, interval: Duration, max_attempts: usize) -> bool {
@@ -14,7 +14,10 @@ fn wait_for_port_open(addr: &str, interval: Duration, max_attempts: usize) -> bo
         if res.is_ok() {
             return true;
         }
-        eprintln!("Waiting for {} (attempt {}/{})", addr, attempt, max_attempts);
+        eprintln!(
+            "Waiting for {} (attempt {}/{})",
+            addr, attempt, max_attempts
+        );
         thread::sleep(interval);
     }
     false
@@ -25,11 +28,14 @@ fn test_ssl_request() {
     const ADDR: &str = "127.0.0.1:5432";
 
     if !is_port_available(ADDR) {
-        panic!("Port {} is already in use. Try `lsof -nP -iTCP:5432 -sTCP:LISTEN`", ADDR);
+        panic!(
+            "Port {} is already in use. Try `lsof -nP -iTCP:5432 -sTCP:LISTEN`",
+            ADDR
+        );
     }
 
     let mut server = Command::new("cargo")
-        .args(&["run", "--bin", "datorum-postgres-wire"])
+        .args(["run", "--bin", "datorum-postgres-wire"])
         .spawn()
         .expect("Failed to start server");
 
@@ -37,19 +43,27 @@ fn test_ssl_request() {
     let duration_in_secs: u64 = 3;
     let total_wait_time = max_attempts * duration_in_secs as usize;
     if !wait_for_port_open(ADDR, Duration::from_secs(duration_in_secs), max_attempts) {
-        panic!("Server did not open port 5432 within {} seconds", total_wait_time);
+        panic!(
+            "Server did not open port 5432 within {} seconds",
+            total_wait_time
+        );
     }
 
     thread::sleep(Duration::from_secs(duration_in_secs));
 
     let output = Command::new("psql")
         .env("PGPASSWORD", "pencil")
-        .args(&[
-            "-h", "127.0.0.1",
-            "-p", "5432",
-            "-U", "any_user",
-            "-c", "SELECT 1",
-            "-o", "/dev/null",
+        .args([
+            "-h",
+            "127.0.0.1",
+            "-p",
+            "5432",
+            "-U",
+            "any_user",
+            "-c",
+            "SELECT 1",
+            "-o",
+            "/dev/null",
             "--set=sslmode=require",
         ])
         .output()

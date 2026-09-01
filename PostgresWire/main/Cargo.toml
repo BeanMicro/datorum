@@ -3,6 +3,9 @@ name = "datorum-postgres-wire"
 version = "0.1.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 rusqlite = { version = "0.35.0", features = ["column_decltype"] }
 pgwire = "0.29.1"
@@ -20,13 +23,7 @@ webpki-roots = "0.25.0"
 rustls-pki-types = "1.12.0"
 
 [dev-dependencies]
-cucumber = { path = "../../QualityEngineering/cucumber-rs" }
-datorum-postgres-wire-steps = { path = "../steps" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 
 [[test]]
 name = "example" # this should be the same as the filename of your test target
-
-[[test]]
-name = "cucumber" # this should be the same as the filename of your test target
-harness = false

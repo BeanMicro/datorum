@@ -11,4 +11,7 @@ path = "src/loadtest.rs"
 name = "e2etest"
 path = "src/e2etest.rs"
 
+[lints]
+workspace = true
+
 [dependencies]

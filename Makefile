@@ -2,7 +2,7 @@
 .PHONY: test test-all demo-server demo-client demo-h3 demo-pgwire
 
 test:
-	cargo test --test cucumber
+	cargo test -p datorum-postgres-wire-steps --test cucumber
 
 test-all:
 	cargo test --workspace

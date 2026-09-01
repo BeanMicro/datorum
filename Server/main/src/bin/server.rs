@@ -72,7 +72,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // process cli arguments
     info!("Starting server");
 
-
     let opt = Opt::from_args();
 
     let root = if let Some(root) = opt.root {
@@ -93,7 +92,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // both cert and key must be DER-encoded
     let cert = CertificateDer::from(std::fs::read(cert)?);
     let key = PrivateKeyDer::try_from(std::fs::read(key)?)?;
-
 
     let mut tls_config = rustls::ServerConfig::builder()
         .with_no_client_auth()

@@ -45,7 +45,7 @@ jobs:
       - name: Unit and integration tests
         run: |
           cargo test -p datorum-server \
-                     -p datorum-postgres-wire-steps \
+                     -p datorum-postgres-wire-steps --lib \
                      -p e2e \
                      -p steps
 
@@ -53,10 +53,13 @@ jobs:
       # inside a test, binds 127.0.0.1:5432 and needs a `psql` client, which
       # makes it unsuitable for CI as written. See PostgresWire/main/tests/ssl_test.rs.
       - name: PostgresWire tests
-        run: cargo test -p datorum-postgres-wire --bins --test example
+        run: cargo test -p datorum-postgres-wire --lib --bins --test example
 
+      # The cucumber target lives in the steps crate: it drives the server
+      # library directly, and keeping it in datorum-postgres-wire would make
+      # that a dependency cycle.
       - name: Gherkin suite
-        run: cargo test -p datorum-postgres-wire --test cucumber
+        run: cargo test -p datorum-postgres-wire-steps --test cucumber
 
   lint:
     name: Lint
@@ -72,12 +75,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      # Non-blocking: `cargo fmt` has never been run over this repository, so
-      # datorum-postgres-wire and datorum-server currently have ~30 hunks of
-      # drift. Run `cargo fmt -p datorum-postgres-wire -p datorum-server`, then
-      # delete continue-on-error to make this a required check.
       - name: Formatting
-        continue-on-error: true
         run: |
           cargo fmt -p datorum-postgres-wire \
                     -p datorum-postgres-wire-steps \
@@ -86,9 +84,9 @@ jobs:
                     -p steps \
                     -- --check
 
-      # Warnings are reported but do not fail the build yet (~30 outstanding).
-      # Add `-- -D warnings` once they are cleared, and opt the crates into the
-      # existing [workspace.lints] table with `[lints] workspace = true`.
+      # Blocking: every crate here opts into [workspace.lints], which denies
+      # clippy::all. `-D warnings` is deliberately not passed on the command
+      # line, because that would also apply to the vendored workspace members.
       - name: Clippy
         run: |
           cargo clippy -p datorum-postgres-wire \
