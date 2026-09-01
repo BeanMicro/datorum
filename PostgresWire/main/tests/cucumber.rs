@@ -23,9 +23,12 @@ async fn main() {
 
     println!("Using features from: {}", features_dir);
 
+    // run_and_exit, not run: `run` reports failures but still returns normally,
+    // so the process exits 0 and CI cannot gate on the result. `run_and_exit`
+    // panics if any step failed or a feature could not be parsed.
     PostgresWireWorld::cucumber()
         .fail_on_skipped()
-        .run(features_dir)
+        .run_and_exit(features_dir)
         .await;
 
     // Create a runtime and block on the cucumber tests

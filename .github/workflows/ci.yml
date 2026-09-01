@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  # No push trigger for master: deploy-dev.yml calls this workflow as its gate,
+  # so a master push would otherwise run the whole suite twice.
+  pull_request:
+  workflow_dispatch:
+  # Lets deploy-dev.yml gate the image build on a green CI run without
+  # duplicating the job definitions.
+  workflow_call:
+
+# A newer push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The workspace lists QualityEngineering/cucumber-rs, .../goose and
+          # .../cucumber-rs/codegen as members, so without submodules cargo
+          # cannot even load the manifest. They resolve over anonymous HTTPS,
+          # so the default GITHUB_TOKEN is enough - no deploy key needed.
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --workspace --all-targets
+
+      # Scoped to the crates this repository owns. `--workspace` would also run
+      # the vendored goose and cucumber-rs suites (36 integration test files
+      # that bind ports and spin up mock servers); those are upstream's tests
+      # and upstream already runs them.
+      - name: Unit and integration tests
+        run: |
+          cargo test -p datorum-server \
+                     -p datorum-postgres-wire-steps \
+                     -p e2e \
+                     -p steps
+
+      # ssl_test is deliberately excluded: it shells out to `cargo run` from
+      # inside a test, binds 127.0.0.1:5432 and needs a `psql` client, which
+      # makes it unsuitable for CI as written. See PostgresWire/main/tests/ssl_test.rs.
+      - name: PostgresWire tests
+        run: cargo test -p datorum-postgres-wire --bins --test example
+
+      - name: Gherkin suite
+        run: cargo test -p datorum-postgres-wire --test cucumber
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Non-blocking: `cargo fmt` has never been run over this repository, so
+      # datorum-postgres-wire and datorum-server currently have ~30 hunks of
+      # drift. Run `cargo fmt -p datorum-postgres-wire -p datorum-server`, then
+      # delete continue-on-error to make this a required check.
+      - name: Formatting
+        continue-on-error: true
+        run: |
+          cargo fmt -p datorum-postgres-wire \
+                    -p datorum-postgres-wire-steps \
+                    -p datorum-server \
+                    -p e2e \
+                    -p steps \
+                    -- --check
+
+      # Warnings are reported but do not fail the build yet (~30 outstanding).
+      # Add `-- -D warnings` once they are cleared, and opt the crates into the
+      # existing [workspace.lints] table with `[lints] workspace = true`.
+      - name: Clippy
+        run: |
+          cargo clippy -p datorum-postgres-wire \
+                       -p datorum-postgres-wire-steps \
+                       -p datorum-server \
+                       -p e2e \
+                       -p steps \
+                       --all-targets
