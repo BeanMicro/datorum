@@ -1,86 +1,62 @@
-use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::process::Command;
-use std::thread;
-use std::time::Duration;
+//! Exercises the PostgreSQL SSLRequest handshake.
+//!
+//! Like the Cucumber steps, this drives the server library in-process on an
+//! ephemeral port. That keeps the test free of a `psql` client, of a fixed port
+//! to collide over, and of a child process that could outlive a failed
+//! assertion.
 
-fn is_port_available(addr: &str) -> bool {
-    TcpListener::bind(addr).map(drop).is_ok()
-}
+use datorum_postgres_wire::serve;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 
-fn wait_for_port_open(addr: &str, interval: Duration, max_attempts: usize) -> bool {
-    let socket_addr: SocketAddr = addr.parse().expect("Invalid ADDR");
-    for attempt in 1..=max_attempts {
-        let res = TcpStream::connect_timeout(&socket_addr, Duration::from_secs(1));
-        if res.is_ok() {
-            return true;
-        }
-        eprintln!(
-            "Waiting for {} (attempt {}/{})",
-            addr, attempt, max_attempts
-        );
-        thread::sleep(interval);
-    }
-    false
-}
+/// The SSLRequest body, as defined by the PostgreSQL frontend/backend protocol:
+/// the 32-bit code 1234 << 16 | 5679.
+const SSL_REQUEST_CODE: i32 = 80_877_103;
 
-#[test]
-fn test_ssl_request() {
-    const ADDR: &str = "127.0.0.1:5432";
+#[tokio::test]
+async fn declines_ssl_request_while_no_tls_acceptor_is_configured() {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("failed to bind an ephemeral port");
+    let addr = listener
+        .local_addr()
+        .expect("failed to read the bound address");
 
-    if !is_port_available(ADDR) {
-        panic!(
-            "Port {} is already in use. Try `lsof -nP -iTCP:5432 -sTCP:LISTEN`",
-            ADDR
-        );
-    }
+    tokio::spawn(async move {
+        let _ = serve(listener).await;
+    });
 
-    let mut server = Command::new("cargo")
-        .args(["run", "--bin", "datorum-postgres-wire"])
-        .spawn()
-        .expect("Failed to start server");
+    let mut stream = TcpStream::connect(addr)
+        .await
+        .expect("failed to connect to the server under test");
 
-    let max_attempts: usize = 10;
-    let duration_in_secs: u64 = 3;
-    let total_wait_time = max_attempts * duration_in_secs as usize;
-    if !wait_for_port_open(ADDR, Duration::from_secs(duration_in_secs), max_attempts) {
-        panic!(
-            "Server did not open port 5432 within {} seconds",
-            total_wait_time
-        );
-    }
+    // SSLRequest is a startup-style packet with no message tag: a 32-bit length
+    // that counts itself, followed by the request code, both big-endian.
+    let mut request = Vec::with_capacity(8);
+    request.extend_from_slice(&8i32.to_be_bytes());
+    request.extend_from_slice(&SSL_REQUEST_CODE.to_be_bytes());
+    stream
+        .write_all(&request)
+        .await
+        .expect("failed to send the SSLRequest");
+    stream
+        .flush()
+        .await
+        .expect("failed to flush the SSLRequest");
 
-    thread::sleep(Duration::from_secs(duration_in_secs));
+    // The backend answers with a single byte: 'S' to continue into a TLS
+    // handshake, 'N' to carry on unencrypted.
+    let mut response = [0u8; 1];
+    stream
+        .read_exact(&mut response)
+        .await
+        .expect("server closed the connection without answering the SSLRequest");
 
-    let output = Command::new("psql")
-        .env("PGPASSWORD", "pencil")
-        .args([
-            "-h",
-            "127.0.0.1",
-            "-p",
-            "5432",
-            "-U",
-            "any_user",
-            "-c",
-            "SELECT 1",
-            "-o",
-            "/dev/null",
-            "--set=sslmode=require",
-        ])
-        .output()
-        .expect("Failed to run psql");
-
-    if output.status.success() {
-        println!("SSL connection successful");
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("psql stderr: {}", stderr);
-        if stderr.contains("SSL") || stderr.contains("certificate") {
-            println!("SSL negotiation attempted but failed due to certificate issues (expected)");
-        } else {
-            panic!("Unexpected error: {}", stderr);
-        }
-    }
-
-    server.kill().expect("Failed to kill server process");
-    server.wait().expect("Failed to wait on server process");
+    // `serve` passes no TLS acceptor to `process_socket`, so refusing is the
+    // only correct answer. Wiring up TLS should flip this to 'S'.
+    assert_eq!(
+        response[0], b'N',
+        "expected the backend to decline the SSLRequest with 'N', got {:#04x}",
+        response[0]
+    );
 }

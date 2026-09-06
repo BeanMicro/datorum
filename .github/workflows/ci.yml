@@ -49,11 +49,8 @@ jobs:
                      -p e2e \
                      -p steps
 
-      # ssl_test is deliberately excluded: it shells out to `cargo run` from
-      # inside a test, binds 127.0.0.1:5432 and needs a `psql` client, which
-      # makes it unsuitable for CI as written. See PostgresWire/main/tests/ssl_test.rs.
       - name: PostgresWire tests
-        run: cargo test -p datorum-postgres-wire --lib --bins --test example
+        run: cargo test -p datorum-postgres-wire --lib --bins --test example --test ssl_test
 
       # The cucumber target lives in the steps crate: it drives the server
       # library directly, and keeping it in datorum-postgres-wire would make
