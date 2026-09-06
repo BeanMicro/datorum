@@ -25,9 +25,10 @@ COPY . .
 # goose/cucumber-rs crates entirely.
 RUN cargo build --release -p datorum-server
 
-# Mint a throwaway self-signed certificate rather than shipping the dev key
-# that is committed at Server/main/src/bin/server.key. The h3 server expects
-# DER, not PEM: a DER certificate and a PKCS#8 DER private key.
+# Mint a throwaway self-signed certificate at build time. The h3 server can also
+# generate one itself when --cert/--key are omitted, but baking it into the image
+# keeps the certificate stable across container restarts. The server expects DER,
+# not PEM: a DER certificate and a PKCS#8 DER private key.
 RUN openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
         -subj "/CN=localhost" -keyout /tmp/key.pem -out /tmp/cert.pem \
     && mkdir -p /certs \

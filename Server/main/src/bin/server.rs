@@ -2,7 +2,7 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use bytes::{Bytes, BytesMut};
 use http::StatusCode;
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use structopt::StructOpt;
 use tokio::{fs::File, io::AsyncReadExt};
 use tracing::{error, info, trace_span};
@@ -39,18 +39,18 @@ pub struct Certs {
     #[structopt(
         long,
         short,
-        default_value = "Server/main/src/bin/server.cert",
-        help = "Certificate for TLS. If present, `--key` is mandatory."
+        help = "DER-encoded certificate for TLS. If present, `--key` is mandatory. \
+                When neither is given, a throwaway self-signed certificate is \
+                generated for localhost."
     )]
-    pub cert: PathBuf,
+    pub cert: Option<PathBuf>,
 
     #[structopt(
         long,
         short,
-        default_value = "Server/main/src/bin/server.key",
-        help = "Private key for the certificate."
+        help = "PKCS#8 DER-encoded private key for the certificate."
     )]
-    pub key: PathBuf,
+    pub key: Option<PathBuf>,
 }
 
 static ALPN: &[u8] = b"h3";
@@ -85,13 +85,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(None)
     };
 
-    let Certs { cert, key } = opt.certs;
-
     // create quinn server endpoint and bind UDP socket
-    info!("After {}", cert.display());
-    // both cert and key must be DER-encoded
-    let cert = CertificateDer::from(std::fs::read(cert)?);
-    let key = PrivateKeyDer::try_from(std::fs::read(key)?)?;
+    let (cert, key) = match (opt.certs.cert, opt.certs.key) {
+        // both cert and key must be DER-encoded
+        (Some(cert), Some(key)) => {
+            info!("loading certificate from {}", cert.display());
+            (
+                CertificateDer::from(std::fs::read(cert)?),
+                PrivateKeyDer::try_from(std::fs::read(key)?)?,
+            )
+        }
+        (None, None) => {
+            info!("no --cert/--key given, generating a self-signed certificate");
+            generate_self_signed()?
+        }
+        _ => return Err("--cert and --key must be given together".into()),
+    };
 
     let mut tls_config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -159,6 +168,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     endpoint.wait_idle().await;
 
     Ok(())
+}
+
+/// Mints a throwaway self-signed certificate for local development, so the
+/// repository does not have to carry a private key of its own.
+fn generate_self_signed()
+-> Result<(CertificateDer<'static>, PrivateKeyDer<'static>), Box<dyn std::error::Error>> {
+    let rcgen::CertifiedKey { cert, key_pair } =
+        rcgen::generate_simple_self_signed(vec!["localhost".to_owned()])?;
+    let key = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_pair.serialize_der()));
+    Ok((cert.der().clone(), key))
 }
 
 async fn handle_request<C>(

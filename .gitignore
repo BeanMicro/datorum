@@ -166,3 +166,10 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
+# TLS material. The h3 server mints a throwaway self-signed certificate when
+# --cert/--key are not given, so no key needs to be committed.
+*.key
+*.pem
+*.p12
+*.pfx
+Server/main/src/bin/server.cert
