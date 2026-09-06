@@ -3,7 +3,7 @@ git clone --recurse-submodules https://github.com/BeanMicro/datorum.git
 
 cd datorum
 
-# The submodules (goose, cucumber-rs, tonic) are public and use HTTPS URLs so
+# The submodules (goose, cucumber-rs) are public and use HTTPS URLs so
 # that a plain clone works without SSH keys. If you prefer to push over SSH,
 # rewrite the URLs locally rather than editing .gitmodules:
 git config --global url."git@github.com:".insteadOf "https://github.com/"
