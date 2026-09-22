@@ -3,5 +3,20 @@ name = "datorum-postgres-wire-steps"
 version = "0.1.0"
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 cucumber = { path = "../../QualityEngineering/cucumber-rs" }
+datorum-postgres-wire = { path = "../main" }
+# The steps assert on individual protocol messages, so they encode and decode
+# frames directly rather than going through a higher-level driver.
+pgwire = "0.29.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
+bytes = "1"
+
+[[test]]
+name = "cucumber" # this should be the same as the filename of your test target
+harness = false

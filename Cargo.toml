@@ -4,7 +4,6 @@ members = [
     "PostgresWire/main",
     "PostgresWire/steps",
     "Server/main",
-    "Server/stg",
     "QualityEngineering/main",
     "QualityEngineering/steps",
     "QualityEngineering/goose",
@@ -15,6 +14,11 @@ members = [
 [workspace.package]
 rust-version = "1.87.0"  # Specify the minimum Rust version required
 
+# Applies only to crates that opt in with `[lints] workspace = true`, which is
+# every crate this repository owns. The vendored goose and cucumber-rs forks are
+# workspace members but do not opt in, so their warnings stay theirs. Denying
+# here rather than passing `-D warnings` in CI is what keeps that separation:
+# the command-line flag reaches vendored members too.
 [workspace.lints]
 rust = { nonstandard_style = "warn", unused = "warn" }
-clippy = { all = "warn" }
+clippy = { all = "deny" }
